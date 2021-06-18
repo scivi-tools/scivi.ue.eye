@@ -16,7 +16,12 @@ using WSServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "ImageUtils.h"
+#include "IImageWrapper.h"
+#include "IImageWrapperModule.h"
+#include "Misc/Base64.h"
 #include "Stimulus.generated.h"
+
 
 UCLASS()
 class READINGTRACKER_API AStimulus : public AActor
@@ -26,18 +31,24 @@ class READINGTRACKER_API AStimulus : public AActor
 private:
 	WSServer m_server;
 	thread m_serverThread;
+	UMaterialInstanceDynamic* m_dynTex;
+	mutex m_mutex;
+	float m_aspect;
+	atomic<bool> m_needsUpdate;
+
 	void initWS();
 	void wsRun();
 	UTexture2D* loadTexture2DFromFile(const FString& fullFilePath);
+	UTexture2D* loadTexture2DFromBytes(const TArray<uint8>& bytes, EImageFormat fmt, int &w, int &h);
+	void updateDynTex(const TArray<uint8>& img, EImageFormat fmt);
 	
 protected:
 	virtual void BeginPlay() override;
-	//virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 public:	
 	AStimulus();
 	virtual void Tick(float DeltaTime) override;
 
-public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) UStaticMeshComponent *mesh;
 };
