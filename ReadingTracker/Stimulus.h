@@ -14,6 +14,8 @@ using namespace std;
 
 using WSServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 
+#include "SRanipal_Eyes_Enums.h"
+
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "ImageUtils.h"
@@ -51,4 +53,5 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) UStaticMeshComponent *mesh;
+	UPROPERTY(EditAnywhere)	SupportedEyeVersion EyeVersion;
 };

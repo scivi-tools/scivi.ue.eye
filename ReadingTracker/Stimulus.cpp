@@ -1,6 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Stimulus.h"
+#include "SRanipalEye_FunctionLibrary.h"
+#undef ERROR
+#include "SRanipalEye_Framework.h"
 
 
 AStimulus::AStimulus()
@@ -16,6 +19,8 @@ AStimulus::AStimulus()
 void AStimulus::BeginPlay()
 {
 	Super::BeginPlay();
+
+    SRanipalEye_Framework::Instance()->StartFramework(EyeVersion);
 	
 	initWS();
 
@@ -25,6 +30,8 @@ void AStimulus::BeginPlay()
 void AStimulus::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     Super::EndPlay(EndPlayReason);
+
+    SRanipalEye_Framework::Instance()->StopFramework();
 
     m_server.stop();
     m_serverThread.join();
@@ -171,7 +178,6 @@ void AStimulus::updateDynTex(const TArray<uint8>& img, EImageFormat fmt)
             lock_guard<mutex> lock(m_mutex);
             m_aspect = (float)w / (float)h;
             m_needsUpdate = true;
-            //mesh->SetRelativeScale3D(FVector(a, 1.0, 1.0));
         }
     }
 }

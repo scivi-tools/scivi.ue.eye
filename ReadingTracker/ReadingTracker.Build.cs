@@ -8,11 +8,14 @@ public class ReadingTracker : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "SRanipal", "SRanipalEye" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "OpenSSL" });
 		
-		PrivateIncludePaths.Add( "ThirdPartyLibs" );
+		PrivateIncludePaths.AddRange(new string[] {
+			"ThirdPartyLibs",
+			"../Plugins/SRanipal/Source/SRanipal/Public/Eye",
+		});
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
