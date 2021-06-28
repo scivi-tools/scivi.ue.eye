@@ -37,6 +37,7 @@ private:
 	mutex m_mutex;
 	float m_aspect;
 	atomic<bool> m_needsUpdate;
+	APlayerCameraManager* m_camera;
 
 	void initWS();
 	void wsRun();

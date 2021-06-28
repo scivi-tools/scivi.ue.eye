@@ -1,9 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Stimulus.h"
-#include "SRanipalEye_FunctionLibrary.h"
+
 #undef ERROR
+#undef UpdateResource
+
+#include "SRanipalEye_FunctionLibrary.h"
 #include "SRanipalEye_Framework.h"
+#include "Engine.h"
 
 
 AStimulus::AStimulus()
@@ -14,11 +18,14 @@ AStimulus::AStimulus()
 	RootComponent = mesh;
     m_aspect = 1.0f;
     m_needsUpdate = false;
+    m_camera = nullptr;
 }
 
 void AStimulus::BeginPlay()
 {
 	Super::BeginPlay();
+
+    m_camera = UGameplayStatics::GetPlayerController(GetWorld(), 0)->PlayerCameraManager;
 
     SRanipalEye_Framework::Instance()->StartFramework(EyeVersion);
 	
@@ -97,6 +104,24 @@ void AStimulus::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+    FFocusInfo focusInfo;
+    FVector gazeOrigin, gazeTarget;
+    bool hit = USRanipalEye_FunctionLibrary::Focus(GazeIndex::COMBINE, 1000.0f, 1.0f, m_camera, ECollisionChannel::ECC_WorldStatic, focusInfo, gazeOrigin, gazeTarget);
+    if (hit)
+    {
+        FVector actorOrigin, actorExtent;
+        //UE_LOG(LogTemp, Warning, TEXT("HIT: %d || pos %f %f %f"), hit, focusInfo.point.X, focusInfo.point.Y, focusInfo.point.Z);
+        GetActorBounds(true, actorOrigin, actorExtent, false);
+        float u = ((focusInfo.point.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f;
+        float v = ((focusInfo.point.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;
+        
+        //UE_LOG(LogTemp, Warning, TEXT("pos %f %f // %f %f %f // %f %f %f // %f %f %f"), u, v, actorOrigin.X, actorOrigin.Y, actorOrigin.Z, actorExtent.X, actorExtent.Y, actorExtent.Z, focusInfo.point.X, focusInfo.point.Y, focusInfo.point.Z);
+        string msg = to_string(u) + " " + to_string(v);
+        for (auto& connection : m_server.get_connections())
+            connection->send(msg);
+    }
+
+
     if (m_needsUpdate)
     {
         lock_guard<mutex> lock(m_mutex);
@@ -106,7 +131,6 @@ void AStimulus::Tick(float DeltaTime)
 
 }
 
-#undef UpdateResource
 UTexture2D* AStimulus::loadTexture2DFromFile(const FString& fullFilePath)
 {
     UTexture2D* loadedT2D = nullptr;
