@@ -32,6 +32,15 @@ void AStimulus::BeginPlay()
 	initWS();
 
     m_dynTex = mesh->CreateAndSetMaterialInstanceDynamic(0);
+
+    /*for (TActorIterator<AStaticMeshActor> Itr(GetWorld()); Itr; ++Itr)
+    {
+        if (Itr->GetName() == "Sphere_2")
+        {
+            m_pointer = *Itr;
+            break;
+        }
+    }*/
 }
 
 void AStimulus::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -107,14 +116,14 @@ void AStimulus::Tick(float DeltaTime)
     FFocusInfo focusInfo;
     FVector gazeOrigin, gazeTarget;
     bool hit = USRanipalEye_FunctionLibrary::Focus(GazeIndex::COMBINE, 1000.0f, 1.0f, m_camera, ECollisionChannel::ECC_WorldStatic, focusInfo, gazeOrigin, gazeTarget);
-    if (hit)
+    if (hit && focusInfo.actor == this)
     {
         FVector actorOrigin, actorExtent;
         //UE_LOG(LogTemp, Warning, TEXT("HIT: %d || pos %f %f %f"), hit, focusInfo.point.X, focusInfo.point.Y, focusInfo.point.Z);
         GetActorBounds(true, actorOrigin, actorExtent, false);
         float u = ((focusInfo.point.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f;
         float v = ((focusInfo.point.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;
-        
+        /*((AStaticMeshActor*)m_pointer)->SetActorLocation(focusInfo.point);*/
         //UE_LOG(LogTemp, Warning, TEXT("pos %f %f // %f %f %f // %f %f %f // %f %f %f"), u, v, actorOrigin.X, actorOrigin.Y, actorOrigin.Z, actorExtent.X, actorExtent.Y, actorExtent.Z, focusInfo.point.X, focusInfo.point.Y, focusInfo.point.Z);
         string msg = to_string(u) + " " + to_string(v);
         for (auto& connection : m_server.get_connections())
