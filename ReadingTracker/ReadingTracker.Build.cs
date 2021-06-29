@@ -7,10 +7,11 @@ public class ReadingTracker : ModuleRules
 	public ReadingTracker(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		bEnableExceptions = true;
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "SRanipal", "SRanipalEye" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "OpenSSL" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "OpenSSL",  "Json", "JsonUtilities" });
 		
 		PrivateIncludePaths.AddRange(new string[] {
 			"ThirdPartyLibs",

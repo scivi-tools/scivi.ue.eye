@@ -36,6 +36,8 @@ private:
 	UMaterialInstanceDynamic* m_dynTex;
 	mutex m_mutex;
 	float m_aspect;
+	float m_scaleX;
+	float m_scaleY;
 	atomic<bool> m_needsUpdate;
 	APlayerCameraManager* m_camera;
 
@@ -43,7 +45,7 @@ private:
 	void wsRun();
 	UTexture2D* loadTexture2DFromFile(const FString& fullFilePath);
 	UTexture2D* loadTexture2DFromBytes(const TArray<uint8>& bytes, EImageFormat fmt, int &w, int &h);
-	void updateDynTex(const TArray<uint8>& img, EImageFormat fmt);
+	void updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float sx, float sy);
 	
 protected:
 	virtual void BeginPlay() override;

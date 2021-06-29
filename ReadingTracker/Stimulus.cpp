@@ -8,6 +8,7 @@
 #include "SRanipalEye_FunctionLibrary.h"
 #include "SRanipalEye_Framework.h"
 #include "Engine.h"
+#include "Json.h"
 
 
 AStimulus::AStimulus()
@@ -17,6 +18,8 @@ AStimulus::AStimulus()
 	mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	RootComponent = mesh;
     m_aspect = 1.0f;
+    m_scaleX = 1.0f;
+    m_scaleY = 1.0f;
     m_needsUpdate = false;
     m_camera = nullptr;
 }
@@ -62,23 +65,29 @@ void AStimulus::initWS()
     ep.on_message = [this](shared_ptr<WSServer::Connection> connection, shared_ptr<WSServer::InMessage> msg)
     {
         auto text = msg->string();
-        TArray<uint8> img;
-        string png = "data:image/png;base64,";
-        string jpg = "data:image/jpeg;base64,";
-        EImageFormat fmt = EImageFormat::Invalid;
-        int startPos = 0;
-        if (equal(png.begin(), png.end(), text.begin()))
+        TSharedPtr<FJsonObject> jsonParsed;
+        TSharedRef<TJsonReader<TCHAR>> jsonReader = TJsonReaderFactory<TCHAR>::Create(text.c_str());
+        if (FJsonSerializer::Deserialize(jsonReader, jsonParsed))
         {
-            fmt = EImageFormat::PNG;
-            startPos = png.length();
+            FString image = jsonParsed->GetStringField("image");
+            TArray<uint8> img;
+            FString png = "data:image/png;base64,";
+            FString jpg = "data:image/jpeg;base64,";
+            EImageFormat fmt = EImageFormat::Invalid;
+            int startPos = 0;
+            if (image.StartsWith(png))
+            {
+                fmt = EImageFormat::PNG;
+                startPos = png.Len();
+            }
+            else if (image.StartsWith(jpg))
+            {
+                fmt = EImageFormat::JPEG;
+                startPos = jpg.Len();
+            }
+            if (fmt != EImageFormat::Invalid && FBase64::Decode(&(image.GetCharArray()[startPos]), img))
+                this->updateDynTex(img, fmt, jsonParsed->GetNumberField("scaleX"), jsonParsed->GetNumberField("scaleY"));
         }
-        else if (equal(jpg.begin(), jpg.end(), text.begin()))
-        {
-            fmt = EImageFormat::JPEG;
-            startPos = jpg.length();
-        }
-        if (fmt != EImageFormat::Invalid && FBase64::Decode(&text.c_str()[startPos], img))
-            this->updateDynTex(img, fmt);
     };
 
     ep.on_open = [](shared_ptr<WSServer::Connection> connection)
@@ -134,7 +143,7 @@ void AStimulus::Tick(float DeltaTime)
     if (m_needsUpdate)
     {
         lock_guard<mutex> lock(m_mutex);
-        mesh->SetRelativeScale3D(FVector(m_aspect * 1.218, 1.218, 1.0));
+        mesh->SetRelativeScale3D(FVector(m_aspect * 1.218 * m_scaleX, 1.218 * m_scaleY, 1.0));
         m_needsUpdate = false;
     }
 
@@ -200,7 +209,7 @@ UTexture2D* AStimulus::loadTexture2DFromBytes(const TArray<uint8>& bytes, EImage
     return loadedT2D;
 }
 
-void AStimulus::updateDynTex(const TArray<uint8>& img, EImageFormat fmt)
+void AStimulus::updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float sx, float sy)
 {
     int w, h;
     UTexture2D* tex = loadTexture2DFromBytes(img, fmt, w, h);
@@ -210,6 +219,8 @@ void AStimulus::updateDynTex(const TArray<uint8>& img, EImageFormat fmt)
         {
             lock_guard<mutex> lock(m_mutex);
             m_aspect = (float)w / (float)h;
+            m_scaleX = sx;
+            m_scaleY = sy;
             m_needsUpdate = true;
         }
     }
