@@ -130,11 +130,12 @@ void AStimulus::Tick(float DeltaTime)
         FVector actorOrigin, actorExtent;
         //UE_LOG(LogTemp, Warning, TEXT("HIT: %d || pos %f %f %f"), hit, focusInfo.point.X, focusInfo.point.Y, focusInfo.point.Z);
         GetActorBounds(true, actorOrigin, actorExtent, false);
-        float u = ((focusInfo.point.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f;
-        float v = ((focusInfo.point.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;
+        float u = 1.0f - ((focusInfo.point.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f;
+        float v = 1.0f - ((focusInfo.point.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;
         /*((AStaticMeshActor*)m_pointer)->SetActorLocation(focusInfo.point);*/
         //UE_LOG(LogTemp, Warning, TEXT("pos %f %f // %f %f %f // %f %f %f // %f %f %f"), u, v, actorOrigin.X, actorOrigin.Y, actorOrigin.Z, actorExtent.X, actorExtent.Y, actorExtent.Z, focusInfo.point.X, focusInfo.point.Y, focusInfo.point.Z);
-        string msg = to_string(u) + " " + to_string(v);
+        FDateTime t = FDateTime::Now();
+        string msg = to_string(t.ToUnixTimestamp() * 1000 + t.GetMillisecond()) + " " + to_string(u) + " " + to_string(v);
         for (auto& connection : m_server.get_connections())
             connection->send(msg);
     }
