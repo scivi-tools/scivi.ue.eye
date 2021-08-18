@@ -35,8 +35,15 @@ class READINGTRACKER_API AStimulus : public AActor
 	GENERATED_BODY()
 	
 private:
+	struct AOI
+	{
+		FString name;
+		TArray<FVector2D> path;
+	};
+
 	WSServer m_server;
 	thread m_serverThread;
+
 	UMaterialInstanceDynamic* m_dynTex;
 	UCanvasRenderTarget2D* m_dynContour;
 	mutex m_mutex;
@@ -45,14 +52,24 @@ private:
 	float m_scaleY;
 	int m_dynTexW;
 	int m_dynTexH;
+	TArray<AOI> m_dynAOIs;
 	atomic<bool> m_needsUpdate;
+
+	int m_stimulusW;
+	int m_stimulusH;
+	int m_activeAOI;
+	TArray<AOI> m_aois;
+	
 	APlayerCameraManager* m_camera;
 
 	void initWS();
 	void wsRun();
 	UTexture2D* loadTexture2DFromFile(const FString& fullFilePath);
-	UTexture2D* loadTexture2DFromBytes(const TArray<uint8>& bytes, EImageFormat fmt, int &w, int &h);
-	void updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float sx, float sy);
+	UTexture2D* loadTexture2DFromBytes(const TArray<uint8>& bytes, EImageFormat fmt, int& w, int& h);
+	void updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float sx, float sy, const TArray<TSharedPtr<FJsonValue>>& aois);
+	bool pointInPolygon(const FVector2D& pt, const TArray<FVector2D> &poly) const;
+	bool hitTest(const FVector2D& pt, const AOI& aoi) const;
+	int findActiveAOI(const FVector2D& pt) const;
 	
 protected:
 	virtual void BeginPlay() override;

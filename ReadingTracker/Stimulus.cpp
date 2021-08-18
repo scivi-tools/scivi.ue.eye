@@ -14,12 +14,18 @@ AStimulus::AStimulus()
 	
 	mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	RootComponent = mesh;
+
     m_aspect = 1.0f;
     m_scaleX = 1.0f;
     m_scaleY = 1.0f;
     m_dynTexW = 0;
     m_dynTexH = 0;
     m_needsUpdate = false;
+    
+    m_stimulusW = 0;
+    m_stimulusH = 0;
+    m_activeAOI = -1;
+
     m_camera = nullptr;
 }
 
@@ -86,7 +92,7 @@ void AStimulus::initWS()
                 startPos = jpg.Len();
             }
             if (fmt != EImageFormat::Invalid && FBase64::Decode(&(image.GetCharArray()[startPos]), img))
-                this->updateDynTex(img, fmt, jsonParsed->GetNumberField("scaleX"), jsonParsed->GetNumberField("scaleY"));
+                this->updateDynTex(img, fmt, jsonParsed->GetNumberField("scaleX"), jsonParsed->GetNumberField("scaleY"), jsonParsed->GetArrayField("AOIs"));
         }
     };
 
@@ -141,6 +147,12 @@ void AStimulus::Tick(float DeltaTime)
                      to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z);
         for (auto& connection : m_server.get_connections())
             connection->send(msg);
+        int newAOI = findActiveAOI(FVector2D(u * m_stimulusW, v * m_stimulusH));
+        if (m_activeAOI != newAOI && m_dynContour)
+        {
+            m_activeAOI = newAOI;
+            m_dynContour->UpdateResource();
+        }
     }
 
 
@@ -152,11 +164,12 @@ void AStimulus::Tick(float DeltaTime)
         m_dynContour->ClearColor = FLinearColor(0, 0, 0, 0);
         m_dynContour->OnCanvasRenderTargetUpdate.AddDynamic(this, &AStimulus::drawContour);
         m_dynTex->SetTextureParameterValue(FName(TEXT("ContourTex")), m_dynContour);
+        m_dynContour->UpdateResource();
+        m_stimulusW = m_dynTexW;
+        m_stimulusH = m_dynTexH;
+        m_aois = m_dynAOIs;
         m_needsUpdate = false;
     }
-
-    if (m_dynContour)
-        m_dynContour->UpdateResource();
 }
 
 UTexture2D* AStimulus::loadTexture2DFromFile(const FString& fullFilePath)
@@ -219,7 +232,7 @@ UTexture2D* AStimulus::loadTexture2DFromBytes(const TArray<uint8>& bytes, EImage
     return loadedT2D;
 }
 
-void AStimulus::updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float sx, float sy)
+void AStimulus::updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float sx, float sy, const TArray<TSharedPtr<FJsonValue>>& aois)
 {
     int w, h;
     UTexture2D* tex = loadTexture2DFromBytes(img, fmt, w, h);
@@ -233,6 +246,16 @@ void AStimulus::updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float s
             m_scaleY = sy;
             m_dynTexW = w;
             m_dynTexH = h;
+            m_dynAOIs.Empty();
+            for (auto value : aois)
+            {
+                AOI aoi;
+                aoi.name = value->AsObject()->GetStringField("name");
+                auto path = value->AsObject()->GetArrayField("path");
+                for (auto point : path)
+                    aoi.path.Add(FVector2D(point->AsArray()[0]->AsNumber(), point->AsArray()[1]->AsNumber()));
+                m_dynAOIs.Add(aoi);
+            }
             m_needsUpdate = true;
         }
     }
@@ -240,7 +263,43 @@ void AStimulus::updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float s
 
 void AStimulus::drawContour(UCanvas *cvs, int32 w, int32 h)
 {
-    FLinearColor color(1, 0, 0, 1);
-    //cvs->K2_DrawLine(FVector2D(0, 0), FVector2D(rand() % w, rand() % h), 3.0f, color);
-    cvs->K2_DrawBox(FVector2D(0, 0), FVector2D(rand() % w, rand() % h), 10, color);
+    if (m_activeAOI != -1)
+    {
+        FLinearColor color(1, 0, 0, 1);
+        FVector2D pt = m_aois[m_activeAOI].path[0];
+        float th = max(round((float)max(m_stimulusW, m_stimulusH) * 0.0025f), 1.0f);
+        for (int i = 1, n = m_aois[m_activeAOI].path.Num(); i < n; ++i)
+        {
+            cvs->K2_DrawLine(pt, m_aois[m_activeAOI].path[i], th, color);
+            pt = m_aois[m_activeAOI].path[i];
+        }
+        cvs->K2_DrawLine(pt, m_aois[m_activeAOI].path[0], th, color);
+    }
+}
+
+bool AStimulus::pointInPolygon(const FVector2D& pt, const TArray<FVector2D>& poly) const
+{
+    bool result = false;
+    int n = poly.Num();
+    for (int i = 0, j = n - 1; i < n; j = i++)
+    {
+        if (((poly[i].Y > pt.Y) != (poly[j].Y > pt.Y)) && (pt.X < (poly[j].X - poly[i].X) * (pt.Y - poly[i].Y) / (poly[j].Y - poly[i].Y) + poly[i].X))
+            result = !result;
+    }
+    return result;
+}
+
+bool AStimulus::hitTest(const FVector2D& pt, const AOI& aoi) const
+{
+    return pointInPolygon(pt, aoi.path); // TODO: check bbox!
+}
+
+int AStimulus::findActiveAOI(const FVector2D& pt) const
+{
+    for (int i = 0, n = m_aois.Num(); i < n; ++i)
+    {
+        if (hitTest(pt, m_aois[i]))
+            return i;
+    }
+    return -1;
 }
