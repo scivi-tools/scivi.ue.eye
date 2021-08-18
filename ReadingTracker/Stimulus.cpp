@@ -135,7 +135,10 @@ void AStimulus::Tick(float DeltaTime)
         /*((AStaticMeshActor*)m_pointer)->SetActorLocation(focusInfo.point);*/
         //UE_LOG(LogTemp, Warning, TEXT("pos %f %f // %f %f %f // %f %f %f // %f %f %f"), u, v, actorOrigin.X, actorOrigin.Y, actorOrigin.Z, actorExtent.X, actorExtent.Y, actorExtent.Z, focusInfo.point.X, focusInfo.point.Y, focusInfo.point.Z);
         FDateTime t = FDateTime::Now();
-        string msg = to_string(t.ToUnixTimestamp() * 1000 + t.GetMillisecond()) + " " + to_string(u) + " " + to_string(v);
+        string msg = to_string(t.ToUnixTimestamp() * 1000 + t.GetMillisecond()) + " " + 
+                     to_string(u) + " " + to_string(v) + " " + 
+                     to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
+                     to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z);
         for (auto& connection : m_server.get_connections())
             connection->send(msg);
     }
