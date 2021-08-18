@@ -9,6 +9,8 @@ THIRD_PARTY_INCLUDES_START
 #include "ws/server_ws.hpp"
 THIRD_PARTY_INCLUDES_END
 #undef UI
+#undef ERROR
+#undef UpdateResource
 
 using namespace std;
 
@@ -22,6 +24,8 @@ using WSServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "Misc/Base64.h"
+#include "Engine/CanvasRenderTarget2D.h"
+#include "Engine/Canvas.h"
 #include "Stimulus.generated.h"
 
 
@@ -34,10 +38,13 @@ private:
 	WSServer m_server;
 	thread m_serverThread;
 	UMaterialInstanceDynamic* m_dynTex;
+	UCanvasRenderTarget2D* m_dynContour;
 	mutex m_mutex;
 	float m_aspect;
 	float m_scaleX;
 	float m_scaleY;
+	int m_dynTexW;
+	int m_dynTexH;
 	atomic<bool> m_needsUpdate;
 	APlayerCameraManager* m_camera;
 
@@ -54,6 +61,8 @@ protected:
 public:	
 	AStimulus();
 	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION() void drawContour(UCanvas* cvs, int32 w, int32 h);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) UStaticMeshComponent *mesh;
 	UPROPERTY(EditAnywhere)	SupportedEyeVersion EyeVersion;

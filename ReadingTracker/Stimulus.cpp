@@ -2,9 +2,6 @@
 
 #include "Stimulus.h"
 
-#undef ERROR
-#undef UpdateResource
-
 #include "SRanipalEye_FunctionLibrary.h"
 #include "SRanipalEye_Framework.h"
 #include "Engine.h"
@@ -20,6 +17,8 @@ AStimulus::AStimulus()
     m_aspect = 1.0f;
     m_scaleX = 1.0f;
     m_scaleY = 1.0f;
+    m_dynTexW = 0;
+    m_dynTexH = 0;
     m_needsUpdate = false;
     m_camera = nullptr;
 }
@@ -35,6 +34,7 @@ void AStimulus::BeginPlay()
 	initWS();
 
     m_dynTex = mesh->CreateAndSetMaterialInstanceDynamic(0);
+    m_dynContour = nullptr;
 
     /*for (TActorIterator<AStaticMeshActor> Itr(GetWorld()); Itr; ++Itr)
     {
@@ -148,9 +148,15 @@ void AStimulus::Tick(float DeltaTime)
     {
         lock_guard<mutex> lock(m_mutex);
         mesh->SetRelativeScale3D(FVector(m_aspect * 1.218 * m_scaleX, 1.218 * m_scaleY, 1.0));
+        m_dynContour = UCanvasRenderTarget2D::CreateCanvasRenderTarget2D(GetWorld(), UCanvasRenderTarget2D::StaticClass(), m_dynTexW, m_dynTexH);
+        m_dynContour->ClearColor = FLinearColor(0, 0, 0, 0);
+        m_dynContour->OnCanvasRenderTargetUpdate.AddDynamic(this, &AStimulus::drawContour);
+        m_dynTex->SetTextureParameterValue(FName(TEXT("ContourTex")), m_dynContour);
         m_needsUpdate = false;
     }
 
+    if (m_dynContour)
+        m_dynContour->UpdateResource();
 }
 
 UTexture2D* AStimulus::loadTexture2DFromFile(const FString& fullFilePath)
@@ -225,7 +231,16 @@ void AStimulus::updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float s
             m_aspect = (float)w / (float)h;
             m_scaleX = sx;
             m_scaleY = sy;
+            m_dynTexW = w;
+            m_dynTexH = h;
             m_needsUpdate = true;
         }
     }
+}
+
+void AStimulus::drawContour(UCanvas *cvs, int32 w, int32 h)
+{
+    FLinearColor color(1, 0, 0, 1);
+    //cvs->K2_DrawLine(FVector2D(0, 0), FVector2D(rand() % w, rand() % h), 3.0f, color);
+    cvs->K2_DrawBox(FVector2D(0, 0), FVector2D(rand() % w, rand() % h), 10, color);
 }
