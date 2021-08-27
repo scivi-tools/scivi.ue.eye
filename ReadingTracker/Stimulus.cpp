@@ -25,6 +25,7 @@ AStimulus::AStimulus()
     m_stimulusW = 0;
     m_stimulusH = 0;
     m_activeAOI = -1;
+    m_inSelectionMode = false;
 
     m_camera = nullptr;
 }
@@ -147,9 +148,12 @@ void AStimulus::Tick(float DeltaTime)
                      to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z);
         for (auto& connection : m_server.get_connections())
             connection->send(msg);
-        int newAOI = findActiveAOI(FVector2D(u * m_stimulusW, v * m_stimulusH));
+
+        int newAOI = m_inSelectionMode ? findActiveAOI(FVector2D(u * m_stimulusW, v * m_stimulusH)) : -1;
         if (m_activeAOI != newAOI && m_dynContour)
         {
+            if (newAOI == -1 && !m_inSelectionMode)
+                toggleSelectedAOI(m_activeAOI);
             m_activeAOI = newAOI;
             m_dynContour->UpdateResource();
         }
@@ -261,20 +265,24 @@ void AStimulus::updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float s
     }
 }
 
+void AStimulus::drawContourOfAOI(UCanvas* cvs, const FLinearColor& color, float th, int aoi) const
+{
+    FVector2D pt = m_aois[aoi].path[0];
+    for (int i = 1, n = m_aois[aoi].path.Num(); i < n; ++i)
+    {
+        cvs->K2_DrawLine(pt, m_aois[aoi].path[i], th, color);
+        pt = m_aois[aoi].path[i];
+    }
+    cvs->K2_DrawLine(pt, m_aois[aoi].path[0], th, color);
+}
+
 void AStimulus::drawContour(UCanvas *cvs, int32 w, int32 h)
 {
+    float th = max(round((float)max(m_stimulusW, m_stimulusH) * 0.0025f), 1.0f);
+    for (auto aoi : m_selectedAOIs)
+        drawContourOfAOI(cvs, FLinearColor(0, 0.2, 0, 1), th, aoi);
     if (m_activeAOI != -1)
-    {
-        FLinearColor color(1, 0, 0, 1);
-        FVector2D pt = m_aois[m_activeAOI].path[0];
-        float th = max(round((float)max(m_stimulusW, m_stimulusH) * 0.0025f), 1.0f);
-        for (int i = 1, n = m_aois[m_activeAOI].path.Num(); i < n; ++i)
-        {
-            cvs->K2_DrawLine(pt, m_aois[m_activeAOI].path[i], th, color);
-            pt = m_aois[m_activeAOI].path[i];
-        }
-        cvs->K2_DrawLine(pt, m_aois[m_activeAOI].path[0], th, color);
-    }
+        drawContourOfAOI(cvs, FLinearColor(1, 0, 0, 1), th, m_activeAOI);
 }
 
 bool AStimulus::pointInPolygon(const FVector2D& pt, const TArray<FVector2D>& poly) const
@@ -302,4 +310,17 @@ int AStimulus::findActiveAOI(const FVector2D& pt) const
             return i;
     }
     return -1;
+}
+
+void AStimulus::toggleSelectedAOI(int aoi)
+{
+    if (m_selectedAOIs.Contains(aoi))
+        m_selectedAOIs.Remove(aoi);
+    else
+        m_selectedAOIs.Add(aoi);
+}
+
+void AStimulus::trigger(bool isPressed)
+{
+    m_inSelectionMode = isPressed;
 }

@@ -55,10 +55,12 @@ private:
 	TArray<AOI> m_dynAOIs;
 	atomic<bool> m_needsUpdate;
 
+	bool m_inSelectionMode;
 	int m_stimulusW;
 	int m_stimulusH;
 	int m_activeAOI;
 	TArray<AOI> m_aois;
+	TArray<int> m_selectedAOIs;
 	
 	APlayerCameraManager* m_camera;
 
@@ -67,9 +69,11 @@ private:
 	UTexture2D* loadTexture2DFromFile(const FString& fullFilePath);
 	UTexture2D* loadTexture2DFromBytes(const TArray<uint8>& bytes, EImageFormat fmt, int& w, int& h);
 	void updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float sx, float sy, const TArray<TSharedPtr<FJsonValue>>& aois);
+	void drawContourOfAOI(UCanvas* cvs, const FLinearColor &color, float th, int aoi) const;
 	bool pointInPolygon(const FVector2D& pt, const TArray<FVector2D> &poly) const;
 	bool hitTest(const FVector2D& pt, const AOI& aoi) const;
 	int findActiveAOI(const FVector2D& pt) const;
+	void toggleSelectedAOI(int aoi);
 	
 protected:
 	virtual void BeginPlay() override;
@@ -80,6 +84,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION() void drawContour(UCanvas* cvs, int32 w, int32 h);
+
+	UFUNCTION(BlueprintCallable) void trigger(bool isPressed);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) UStaticMeshComponent *mesh;
 	UPROPERTY(EditAnywhere)	SupportedEyeVersion EyeVersion;
