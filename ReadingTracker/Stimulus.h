@@ -35,10 +35,16 @@ class READINGTRACKER_API AStimulus : public AActor
 	GENERATED_BODY()
 	
 private:
+	struct BBox
+	{
+		FVector2D lt;
+		FVector2D rb;
+	};
 	struct AOI
 	{
 		FString name;
 		TArray<FVector2D> path;
+		BBox bbox;
 	};
 
 	WSServer m_server;
@@ -71,6 +77,7 @@ private:
 	void updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float sx, float sy, const TArray<TSharedPtr<FJsonValue>>& aois);
 	void drawContourOfAOI(UCanvas* cvs, const FLinearColor &color, float th, int aoi) const;
 	bool pointInPolygon(const FVector2D& pt, const TArray<FVector2D> &poly) const;
+	bool pointInBBox(const FVector2D& pt, const BBox& bbox) const;
 	bool hitTest(const FVector2D& pt, const AOI& aoi) const;
 	int findActiveAOI(const FVector2D& pt) const;
 	void toggleSelectedAOI(int aoi);

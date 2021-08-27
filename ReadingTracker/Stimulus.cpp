@@ -254,10 +254,23 @@ void AStimulus::updateDynTex(const TArray<uint8>& img, EImageFormat fmt, float s
             for (auto value : aois)
             {
                 AOI aoi;
-                aoi.name = value->AsObject()->GetStringField("name");
-                auto path = value->AsObject()->GetArrayField("path");
-                for (auto point : path)
-                    aoi.path.Add(FVector2D(point->AsArray()[0]->AsNumber(), point->AsArray()[1]->AsNumber()));
+                auto nameField = value->AsObject()->TryGetField("name");
+                if (nameField)
+                    aoi.name = nameField->AsString();
+                auto pathField = value->AsObject()->TryGetField("path");
+                if (pathField)
+                {
+                    auto path = pathField->AsArray();
+                    for (auto point : path)
+                        aoi.path.Add(FVector2D(point->AsArray()[0]->AsNumber(), point->AsArray()[1]->AsNumber()));
+                }
+                auto bboxField = value->AsObject()->TryGetField("bbox");
+                if (bboxField)
+                {
+                    auto bbox = bboxField->AsArray();
+                    aoi.bbox.lt = FVector2D(bbox[0]->AsNumber(), bbox[1]->AsNumber());
+                    aoi.bbox.rb = FVector2D(bbox[2]->AsNumber(), bbox[3]->AsNumber());
+                }
                 m_dynAOIs.Add(aoi);
             }
             m_needsUpdate = true;
@@ -297,9 +310,14 @@ bool AStimulus::pointInPolygon(const FVector2D& pt, const TArray<FVector2D>& pol
     return result;
 }
 
+bool AStimulus::pointInBBox(const FVector2D& pt, const BBox& bbox) const
+{
+    return pt.X >= bbox.lt.X && pt.Y >= bbox.lt.Y && pt.X <= bbox.rb.X && pt.Y <= bbox.rb.Y;
+}
+
 bool AStimulus::hitTest(const FVector2D& pt, const AOI& aoi) const
 {
-    return pointInPolygon(pt, aoi.path); // TODO: check bbox!
+    return pointInBBox(pt, aoi.bbox) && pointInPolygon(pt, aoi.path);
 }
 
 int AStimulus::findActiveAOI(const FVector2D& pt) const
