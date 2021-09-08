@@ -4,6 +4,8 @@
 
 #include "SRanipalEye_FunctionLibrary.h"
 #include "SRanipalEye_Framework.h"
+#include "SRanipal_API_Eye.h"
+#include "SRanipalEye_Core.h"
 #include "Engine.h"
 #include "Json.h"
 
@@ -141,24 +143,33 @@ void AStimulus::Tick(float DeltaTime)
         float v = 1.0f - ((focusInfo.point.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;
         /*((AStaticMeshActor*)m_pointer)->SetActorLocation(focusInfo.point);*/
         //UE_LOG(LogTemp, Warning, TEXT("pos %f %f // %f %f %f // %f %f %f // %f %f %f"), u, v, actorOrigin.X, actorOrigin.Y, actorOrigin.Z, actorExtent.X, actorExtent.Y, actorExtent.Z, focusInfo.point.X, focusInfo.point.Y, focusInfo.point.Z);
-        FDateTime t = FDateTime::Now();
-        string msg = to_string(t.ToUnixTimestamp() * 1000 + t.GetMillisecond()) + " " + 
-                     to_string(u) + " " + to_string(v) + " " + 
-                     to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
-                     to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z);
-        for (auto& connection : m_server.get_connections())
-            connection->send(msg);
+        ViveSR::anipal::Eye::VerboseData vd;
+        SRanipalEye_Core::Instance()->GetVerboseData(vd);
+        //UE_LOG(LogTemp, Warning, TEXT("pupil %f %f"), vd.left.pupil_diameter_mm, vd.right.pupil_diameter_mm);
+        bool selected = false;
 
-        int newAOI = m_inSelectionMode ? findActiveAOI(FVector2D(u * m_stimulusW, v * m_stimulusH)) : -1;
+        int currentAOI = findActiveAOI(FVector2D(u * m_stimulusW, v * m_stimulusH));
+        int newAOI = m_inSelectionMode ? currentAOI : -1;
         if (m_activeAOI != newAOI && m_dynContour)
         {
             if (newAOI == -1 && !m_inSelectionMode)
+            {
+                selected = true;
                 toggleSelectedAOI(m_activeAOI);
+            }
             m_activeAOI = newAOI;
             m_dynContour->UpdateResource();
         }
-    }
 
+        FDateTime t = FDateTime::Now();
+        string msg = to_string(t.ToUnixTimestamp() * 1000 + t.GetMillisecond()) + " " +
+                     to_string(u) + " " + to_string(v) + " " +
+                     to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
+                     to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z) + " " +
+                     to_string(vd.left.pupil_diameter_mm) + " " + to_string(vd.right.pupil_diameter_mm) + " " + to_string(currentAOI) + (selected ? " SELECT" : " LOOKAT");
+        for (auto& connection : m_server.get_connections())
+            connection->send(msg);
+    }
 
     if (m_needsUpdate)
     {
@@ -341,4 +352,5 @@ void AStimulus::toggleSelectedAOI(int aoi)
 void AStimulus::trigger(bool isPressed)
 {
     m_inSelectionMode = isPressed;
+    //ViveSR::anipal::Eye::LaunchEyeCalibration(nullptr);
 }
