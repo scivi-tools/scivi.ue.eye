@@ -78,24 +78,29 @@ void AStimulus::initWS()
         TSharedRef<TJsonReader<TCHAR>> jsonReader = TJsonReaderFactory<TCHAR>::Create(text.c_str());
         if (FJsonSerializer::Deserialize(jsonReader, jsonParsed))
         {
-            FString image = jsonParsed->GetStringField("image");
-            TArray<uint8> img;
-            FString png = "data:image/png;base64,";
-            FString jpg = "data:image/jpeg;base64,";
-            EImageFormat fmt = EImageFormat::Invalid;
-            int startPos = 0;
-            if (image.StartsWith(png))
+            if (jsonParsed->TryGetField("calibrate"))
+                calibrate();
+            else
             {
-                fmt = EImageFormat::PNG;
-                startPos = png.Len();
+                FString image = jsonParsed->GetStringField("image");
+                TArray<uint8> img;
+                FString png = "data:image/png;base64,";
+                FString jpg = "data:image/jpeg;base64,";
+                EImageFormat fmt = EImageFormat::Invalid;
+                int startPos = 0;
+                if (image.StartsWith(png))
+                {
+                    fmt = EImageFormat::PNG;
+                    startPos = png.Len();
+                }
+                else if (image.StartsWith(jpg))
+                {
+                    fmt = EImageFormat::JPEG;
+                    startPos = jpg.Len();
+                }
+                if (fmt != EImageFormat::Invalid && FBase64::Decode(&(image.GetCharArray()[startPos]), img))
+                    this->updateDynTex(img, fmt, jsonParsed->GetNumberField("scaleX"), jsonParsed->GetNumberField("scaleY"), jsonParsed->GetArrayField("AOIs"));
             }
-            else if (image.StartsWith(jpg))
-            {
-                fmt = EImageFormat::JPEG;
-                startPos = jpg.Len();
-            }
-            if (fmt != EImageFormat::Invalid && FBase64::Decode(&(image.GetCharArray()[startPos]), img))
-                this->updateDynTex(img, fmt, jsonParsed->GetNumberField("scaleX"), jsonParsed->GetNumberField("scaleY"), jsonParsed->GetArrayField("AOIs"));
         }
     };
 
@@ -352,5 +357,9 @@ void AStimulus::toggleSelectedAOI(int aoi)
 void AStimulus::trigger(bool isPressed)
 {
     m_inSelectionMode = isPressed;
-    //ViveSR::anipal::Eye::LaunchEyeCalibration(nullptr);
+}
+
+void AStimulus::calibrate()
+{
+    ViveSR::anipal::Eye::LaunchEyeCalibration(nullptr);
 }

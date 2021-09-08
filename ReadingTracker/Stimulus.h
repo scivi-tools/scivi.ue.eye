@@ -81,6 +81,7 @@ private:
 	bool hitTest(const FVector2D& pt, const AOI& aoi) const;
 	int findActiveAOI(const FVector2D& pt) const;
 	void toggleSelectedAOI(int aoi);
+	void calibrate();
 	
 protected:
 	virtual void BeginPlay() override;
