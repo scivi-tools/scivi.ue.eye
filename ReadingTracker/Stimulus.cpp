@@ -188,6 +188,8 @@ void AStimulus::Tick(float DeltaTime)
         m_stimulusW = m_dynTexW;
         m_stimulusH = m_dynTexH;
         m_aois = m_dynAOIs;
+        m_activeAOI = -1;
+        m_selectedAOIs.Empty();
         m_needsUpdate = false;
     }
 }
