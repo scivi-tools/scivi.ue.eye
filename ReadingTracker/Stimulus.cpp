@@ -184,12 +184,12 @@ void AStimulus::Tick(float DeltaTime)
         m_dynContour->ClearColor = FLinearColor(0, 0, 0, 0);
         m_dynContour->OnCanvasRenderTargetUpdate.AddDynamic(this, &AStimulus::drawContour);
         m_dynTex->SetTextureParameterValue(FName(TEXT("ContourTex")), m_dynContour);
-        m_dynContour->UpdateResource();
         m_stimulusW = m_dynTexW;
         m_stimulusH = m_dynTexH;
         m_aois = m_dynAOIs;
         m_activeAOI = -1;
         m_selectedAOIs.Empty();
+        m_dynContour->UpdateResource();
         m_needsUpdate = false;
     }
 }
