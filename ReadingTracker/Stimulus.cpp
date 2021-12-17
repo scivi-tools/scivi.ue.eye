@@ -184,11 +184,24 @@ void AStimulus::Tick(float DeltaTime)
                      to_string(u) + " " + to_string(v) + " " +
                      to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
                      to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z) + " " +
-                     to_string(vd.left.pupil_diameter_mm) + " " + to_string(vd.right.pupil_diameter_mm) + " " + to_string(currentAOI) + (selected ? " SELECT" : m_rReleased ? " R_RELD" : m_imgUpdated ? " IMG_UP" : " LOOKAT");
-        m_rReleased = false;
-        m_imgUpdated = false;
+                     to_string(vd.left.pupil_diameter_mm) + " " + to_string(vd.right.pupil_diameter_mm) + " " + to_string(currentAOI);
+        string msgToSend = msg + (selected ? " SELECT" : " LOOKAT");
         for (auto& connection : m_server.get_connections())
-            connection->send(msg);
+            connection->send(msgToSend);
+        if (m_rReleased)
+        {
+            msgToSend = msg + " R_RELD";
+            m_rReleased = false;
+            for (auto& connection : m_server.get_connections())
+                connection->send(msgToSend);
+        }
+        if (m_imgUpdated)
+        {
+            msgToSend = msg + " IMG_UP";
+            m_imgUpdated = false;
+            for (auto& connection : m_server.get_connections())
+                connection->send(msgToSend);
+        }
     }
 
     if (m_needsUpdate)
