@@ -29,6 +29,8 @@ using WSServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 #include "Stimulus.generated.h"
 
 
+//#define EYE_DEBUG
+
 UCLASS()
 class READINGTRACKER_API AStimulus : public AActor
 {
@@ -62,11 +64,17 @@ private:
 	atomic<bool> m_needsUpdate;
 
 	bool m_inSelectionMode;
+	bool m_rReleased;
+	bool m_imgUpdated;
 	int m_stimulusW;
 	int m_stimulusH;
 	int m_activeAOI;
 	TArray<AOI> m_aois;
 	TArray<int> m_selectedAOIs;
+#ifdef EYE_DEBUG
+	float m_u;
+	float m_v;
+#endif // EYE_DEBUG
 	
 	APlayerCameraManager* m_camera;
 

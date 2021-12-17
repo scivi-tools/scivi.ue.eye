@@ -28,8 +28,14 @@ AStimulus::AStimulus()
     m_stimulusH = 0;
     m_activeAOI = -1;
     m_inSelectionMode = false;
+    m_rReleased = false;
+    m_imgUpdated = false;
 
     m_camera = nullptr;
+
+#ifdef EYE_DEBUG
+    m_u = m_v = 0.0f;
+#endif // EYE_DEBUG
 }
 
 void AStimulus::BeginPlay()
@@ -153,6 +159,12 @@ void AStimulus::Tick(float DeltaTime)
         //UE_LOG(LogTemp, Warning, TEXT("pupil %f %f"), vd.left.pupil_diameter_mm, vd.right.pupil_diameter_mm);
         bool selected = false;
 
+#ifdef EYE_DEBUG
+        m_u = u;
+        m_v = v;
+        int currentAOI = -1;
+        m_dynContour->UpdateResource();
+#else
         int currentAOI = findActiveAOI(FVector2D(u * m_stimulusW, v * m_stimulusH));
         int newAOI = m_inSelectionMode ? currentAOI : -1;
         if (m_activeAOI != newAOI && m_dynContour)
@@ -165,13 +177,16 @@ void AStimulus::Tick(float DeltaTime)
             m_activeAOI = newAOI;
             m_dynContour->UpdateResource();
         }
+#endif // EYE_DEBUG
 
         FDateTime t = FDateTime::Now();
         string msg = to_string(t.ToUnixTimestamp() * 1000 + t.GetMillisecond()) + " " +
                      to_string(u) + " " + to_string(v) + " " +
                      to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
                      to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z) + " " +
-                     to_string(vd.left.pupil_diameter_mm) + " " + to_string(vd.right.pupil_diameter_mm) + " " + to_string(currentAOI) + (selected ? " SELECT" : " LOOKAT");
+                     to_string(vd.left.pupil_diameter_mm) + " " + to_string(vd.right.pupil_diameter_mm) + " " + to_string(currentAOI) + (selected ? " SELECT" : m_rReleased ? " R_RELD" : m_imgUpdated ? " IMG_UP" : " LOOKAT");
+        m_rReleased = false;
+        m_imgUpdated = false;
         for (auto& connection : m_server.get_connections())
             connection->send(msg);
     }
@@ -191,6 +206,7 @@ void AStimulus::Tick(float DeltaTime)
         m_selectedAOIs.Empty();
         m_dynContour->UpdateResource();
         m_needsUpdate = false;
+        m_imgUpdated = true;
     }
 }
 
@@ -309,11 +325,24 @@ void AStimulus::drawContourOfAOI(UCanvas* cvs, const FLinearColor& color, float 
 
 void AStimulus::drawContour(UCanvas *cvs, int32 w, int32 h)
 {
+#ifdef EYE_DEBUG
+    float th = max(round((float)max(m_stimulusW, m_stimulusH) * 0.0025f), 1.0f);
+    float x = m_u * m_stimulusW;
+    float y = m_v * m_stimulusH;
+    FLinearColor color = FLinearColor(1, 0, 0, 1);
+    const int n = 8;
+    for (int i = 0; i < n; ++i)
+    {
+        cvs->K2_DrawLine(FVector2D(x + 2.0f * th * cos((float)i / (float)(n - 1) * 2.0f * PI), y + 2.0f * th * sin((float)i / (float)(n - 1) * 2.0f * PI)),
+            FVector2D(x + 2.0f * th * cos((float)(i + 1) / (float)(n - 1) * 2.0f * PI), y + 2.0f * th * sin((float)(i + 1) / (float)(n - 1) * 2.0f * PI)), th, color);
+    }
+#else
     float th = max(round((float)max(m_stimulusW, m_stimulusH) * 0.0025f), 1.0f);
     for (auto aoi : m_selectedAOIs)
         drawContourOfAOI(cvs, FLinearColor(0, 0.2, 0, 1), th, aoi);
     if (m_activeAOI != -1)
         drawContourOfAOI(cvs, FLinearColor(1, 0, 0, 1), th, m_activeAOI);
+#endif // EYE_DEBUG
 }
 
 bool AStimulus::pointInPolygon(const FVector2D& pt, const TArray<FVector2D>& poly) const
@@ -359,6 +388,8 @@ void AStimulus::toggleSelectedAOI(int aoi)
 void AStimulus::trigger(bool isPressed)
 {
     m_inSelectionMode = isPressed;
+    if (!isPressed)
+        m_rReleased = true;
 }
 
 void AStimulus::calibrate()
