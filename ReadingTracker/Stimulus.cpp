@@ -8,6 +8,7 @@
 #include "SRanipalEye_Core.h"
 #include "Engine.h"
 #include "Json.h"
+#include "IXRTrackingSystem.h"
 
 
 AStimulus::AStimulus()
@@ -159,11 +160,24 @@ void AStimulus::Tick(float DeltaTime)
         //UE_LOG(LogTemp, Warning, TEXT("pupil %f %f"), vd.left.pupil_diameter_mm, vd.right.pupil_diameter_mm);
         bool selected = false;
 
+        FVector gazeVec = gazeTarget - gazeOrigin;
+        gazeVec.Normalize();
+        FQuat headOrientation = m_camera->GetCameraRotation().Quaternion();
+        gazeVec = headOrientation.UnrotateVector(gazeVec);
+        FVector gazeVecXY(gazeVec.X, gazeVec.Y, 0.0f);
+        gazeVecXY.Normalize();
+        FVector gazeVecXZ(gazeVec.X, 0.0f, gazeVec.Z);
+        gazeVecXZ.Normalize();
+        float cAlpha = FVector::DotProduct(gazeVecXY, FVector(0.0f, 1.0f, 0.0f));
+        float cBeta = FVector::DotProduct(gazeVecXZ, FVector(0.0f, 0.0f, 1.0f));
+        //GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), cAlpha, cBeta));
+
 #ifdef EYE_DEBUG
         m_u = u;
         m_v = v;
         int currentAOI = -1;
-        m_dynContour->UpdateResource();
+        if (m_dynContour)
+            m_dynContour->UpdateResource();
 #else
         int currentAOI = findActiveAOI(FVector2D(u * m_stimulusW, v * m_stimulusH));
         int newAOI = m_inSelectionMode ? currentAOI : -1;
@@ -184,7 +198,8 @@ void AStimulus::Tick(float DeltaTime)
                      to_string(u) + " " + to_string(v) + " " +
                      to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
                      to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z) + " " +
-                     to_string(vd.left.pupil_diameter_mm) + " " + to_string(vd.right.pupil_diameter_mm) + " " + to_string(currentAOI);
+                     /*to_string(vd.left.pupil_diameter_mm) + " " + to_string(vd.right.pupil_diameter_mm) +*/
+                     to_string(cAlpha) + " " + to_string(cBeta) + " " + to_string(currentAOI);
         string msgToSend = msg + (selected ? " SELECT" : " LOOKAT");
         for (auto& connection : m_server.get_connections())
             connection->send(msgToSend);
