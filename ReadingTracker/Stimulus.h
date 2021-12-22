@@ -29,7 +29,7 @@ using WSServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 #include "Stimulus.generated.h"
 
 
-//#define EYE_DEBUG
+#define EYE_DEBUG
 
 UCLASS()
 class READINGTRACKER_API AStimulus : public AActor
