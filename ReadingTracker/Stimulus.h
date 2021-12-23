@@ -57,6 +57,11 @@ private:
 		CalibPt(float cA, float cB, float eU, float eV): cAlpha(cA), cBeta(cB), errU(eU), errV(eV) {};
 		float pDist(float ca, float cb) const { return fabs(cAlpha - ca) + fabs(cBeta - cb); };
 	};
+	struct CalibQ
+	{
+		FQuat qgaz; // rotate from cam to gaze
+		FQuat qerr; // rotate from gaze to real
+	};
 
 	WSServer m_server;
 	thread m_serverThread;
@@ -72,6 +77,7 @@ private:
 	TArray<AOI> m_dynAOIs;
 	atomic<bool> m_needsUpdate;
 	atomic<bool> m_needsUpdateCalib;
+	int m_calibIndex;
 
 	bool m_inSelectionMode;
 	bool m_rReleased;
@@ -89,6 +95,7 @@ private:
 #endif // EYE_DEBUG
 	TArray<CalibPt> m_calibBack;
 	TArray<CalibPt> m_calib;
+	TArray<CalibQ> m_calibQ;
 	
 	APlayerCameraManager* m_camera;
 

@@ -25,6 +25,7 @@ AStimulus::AStimulus()
     m_dynTexH = 0;
     m_needsUpdate = false;
     m_needsUpdateCalib = false;
+    m_calibIndex = 0;
     
     m_stimulusW = 0;
     m_stimulusH = 0;
@@ -248,15 +249,43 @@ void AStimulus::Tick(float DeltaTime)
 
         GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), vd.right.pupil_position_in_sensor_area.X, vd.right.pupil_position_in_sensor_area.Y));
         
+        if (m_rReleased && m_calibIndex < 9)
+        {
+            const FVector2D calibRefs[] = 
+            {
+                FVector2D(0.05, 0.05), FVector2D(0.5, 0.05), FVector2D(0.95, 0.05),
+                FVector2D(0.05, 0.5), FVector2D(0.5, 0.5), FVector2D(0.95, 0.5),
+                FVector2D(0.05, 0.95), FVector2D(0.5, 0.95), FVector2D(0.95, 0.95)
+            };
+            FVector2D realUV = calibRefs[m_calibIndex++];
+            FVector realPos((2.0f * (1.0f - realUV.X) - 1.0f) * actorExtent.X + actorOrigin.X,
+                            actorOrigin.Y,
+                            (2.0f * (1.0f - realUV.Y) - 1.0f) * actorExtent.Z + actorOrigin.Z);
+            FVector real = realPos - gazeOrigin;
+            CalibQ cq;
+            FVector gaze = gazeTarget - gazeOrigin;
+            cq.qgaz = FQuat::FindBetween(headOrientation.GetForwardVector(), gaze);
+            cq.qerr = FQuat::FindBetween(gaze, real);
+            m_calibQ.Add(cq);
+        }
+
 
         //applyCalib(cAlpha, cBeta, u, v);
 
 #ifdef EYE_DEBUG
         m_u = u;
         m_v = v;
-        applyCalib(cAlpha, cBeta, u, v);
+        /*applyCalib(cAlpha, cBeta, u, v);
         m_cu = u;
-        m_cv = v;
+        m_cv = v;*/
+        if (m_calibQ.Num() == 9)
+        {
+            m_calibQ.Sort();
+        }
+        FVector realGaze;
+        
+        float u = 1.0f - ((focusInfo.point.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f;
+        float v = 1.0f - ((focusInfo.point.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;
         int currentAOI = -1;
         if (m_dynContour)
             m_dynContour->UpdateResource();
