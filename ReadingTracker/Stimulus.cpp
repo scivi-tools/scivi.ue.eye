@@ -235,7 +235,7 @@ void AStimulus::Tick(float DeltaTime)
         //UE_LOG(LogTemp, Warning, TEXT("pupil %f %f"), vd.left.pupil_diameter_mm, vd.right.pupil_diameter_mm);
         bool selected = false;
 
-        FVector gazeVec = gazeTarget - gazeOrigin;
+        /*FVector gazeVec = gazeTarget - gazeOrigin;
         gazeVec.Normalize();
         FQuat headOrientation = m_camera->GetCameraRotation().Quaternion();
         gazeVec = headOrientation.UnrotateVector(gazeVec);
@@ -244,12 +244,12 @@ void AStimulus::Tick(float DeltaTime)
         FVector gazeVecXZ(gazeVec.X, 0.0f, gazeVec.Z);
         gazeVecXZ.Normalize();
         float cAlpha = FVector::DotProduct(gazeVecXY, FVector(0.0f, 1.0f, 0.0f));
-        float cBeta = FVector::DotProduct(gazeVecXZ, FVector(0.0f, 0.0f, 1.0f));
+        float cBeta = FVector::DotProduct(gazeVecXZ, FVector(0.0f, 0.0f, 1.0f));*/
         //GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), cAlpha, cBeta));
 
-        GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), vd.right.pupil_position_in_sensor_area.X, vd.right.pupil_position_in_sensor_area.Y));
+        //GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), vd.right.pupil_position_in_sensor_area.X, vd.right.pupil_position_in_sensor_area.Y));
         
-        if (m_rReleased && m_calibIndex < 9)
+        /*if (m_rReleased && m_calibIndex < 9)
         {
             const FVector2D calibRefs[] = 
             {
@@ -267,7 +267,7 @@ void AStimulus::Tick(float DeltaTime)
             cq.qgaz = FQuat::FindBetween(headOrientation.GetForwardVector(), gaze);
             cq.qerr = FQuat::FindBetween(gaze, real);
             m_calibQ.Add(cq);
-        }
+        }*/
 
 
         //applyCalib(cAlpha, cBeta, u, v);
@@ -278,7 +278,7 @@ void AStimulus::Tick(float DeltaTime)
         /*applyCalib(cAlpha, cBeta, u, v);
         m_cu = u;
         m_cv = v;*/
-        if (m_calibQ.Num() == 9)
+        /*if (m_calibQ.Num() == 9)
         {
             m_calibQ.Sort();
         }
@@ -286,6 +286,7 @@ void AStimulus::Tick(float DeltaTime)
         
         float u = 1.0f - ((focusInfo.point.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f;
         float v = 1.0f - ((focusInfo.point.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;
+        */
         int currentAOI = -1;
         if (m_dynContour)
             m_dynContour->UpdateResource();
@@ -310,7 +311,10 @@ void AStimulus::Tick(float DeltaTime)
                      to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
                      to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z) + " " +
                      /*to_string(vd.left.pupil_diameter_mm) + " " + to_string(vd.right.pupil_diameter_mm) +*/
-                     to_string(cAlpha) + " " + to_string(cBeta) + " " + to_string(currentAOI);
+                     /*to_string(cAlpha) + " " + to_string(cBeta) + */
+                     to_string((vd.right.pupil_position_in_sensor_area.X + vd.left.pupil_position_in_sensor_area.X) / 2.0f) + " " + 
+                     to_string((vd.right.pupil_position_in_sensor_area.Y + vd.left.pupil_position_in_sensor_area.Y) / 2.0f) + " " +
+                     to_string(currentAOI);
         string msgToSend = msg + (selected ? " SELECT" : " LOOKAT");
         for (auto& connection : m_server.get_connections())
             connection->send(msgToSend);
