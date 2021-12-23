@@ -24,6 +24,7 @@ AStimulus::AStimulus()
     m_dynTexW = 0;
     m_dynTexH = 0;
     m_needsUpdate = false;
+    m_needsUpdateCalib = false;
     
     m_stimulusW = 0;
     m_stimulusH = 0;
@@ -131,12 +132,84 @@ void AStimulus::initWS()
         UE_LOG(LogTemp, Warning, TEXT("WebSocket: Error"));
     };
 
+    ///////////////////
+    auto& epCalib = m_server.endpoint["^/calib/?$"];
+
+    epCalib.on_message = [this](shared_ptr<WSServer::Connection> connection, shared_ptr<WSServer::InMessage> msg)
+    {
+        auto text = msg->string();
+        TSharedPtr<FJsonObject> jsonParsed;
+        TSharedRef<TJsonReader<TCHAR>> jsonReader = TJsonReaderFactory<TCHAR>::Create(text.c_str());
+        if (FJsonSerializer::Deserialize(jsonReader, jsonParsed))
+        {
+            lock_guard<mutex> lock(m_mutex);
+            auto points = jsonParsed->AsArray();
+            m_calibBack.Empty();
+            for (auto point : points)
+            {
+                m_calibBack.Add(CalibPt(point->AsArray()[0]->AsNumber(), point->AsArray()[2]->AsNumber(),
+                                    point->AsArray()[1]->AsNumber(), point->AsArray()[3]->AsNumber()));
+            }
+            m_needsUpdateCalib = true;
+        }
+    };
+
+    epCalib.on_open = [](shared_ptr<WSServer::Connection> connection)
+    {
+        UE_LOG(LogTemp, Display, TEXT("WebSocket: Opened"));
+    };
+
+    epCalib.on_close = [](shared_ptr<WSServer::Connection> connection, int status, const string&)
+    {
+        UE_LOG(LogTemp, Display, TEXT("WebSocket: Closed"));
+    };
+
+    epCalib.on_handshake = [](shared_ptr<WSServer::Connection>, SimpleWeb::CaseInsensitiveMultimap&)
+    {
+        return SimpleWeb::StatusCode::information_switching_protocols;
+    };
+
+    epCalib.on_error = [](shared_ptr<WSServer::Connection> connection, const SimpleWeb::error_code& ec)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("WebSocket: Error"));
+    };
+    ///////////////////
+
     m_serverThread = thread(&AStimulus::wsRun, this);
 }
 
 void AStimulus::wsRun()
 {
 	m_server.start();
+}
+
+void AStimulus::applyCalib(float ca, float cb, float &u, float &v)
+{
+    if (m_calib.Num() > 0)
+    {
+        m_calib.Sort([](const CalibPt &cpt1, const CalibPt &cpt2) { return cpt1.pDist(ca, cb) < cpt2.pDist(ca, cb); });
+#define Xv1 m_calib[0].cAlpha
+#define Xv2 m_calib[1].cAlpha
+#define Xv3 m_calib[2].cAlpha
+#define Yv1 m_calib[0].cBeta
+#define Yv2 m_calib[1].cBeta
+#define Yv3 m_calib[2].cBeta
+#define Px ca
+#define Py cb
+        float w0 = ((Yv2 - Yv3) * (Px - Xv3) + (Xv3 - Xv2) * (Py - Yv3)) / ((Yv2 - Yv3) * (Xv1 - Xv3) + (Xv3 - Xv2) * (Yv1 - Yv3));
+        float w1 = ((Yv3 - Yv1) * (Px - Xv3) + (Xv1 - Xv3) * (Py - Yv3)) / ((Yv2 - Yv3) * (Xv1 - Xv3) + (Xv3 - Xv2) * (Yv1 - Yv3));
+        float w2 = 1.0f - w0 - w1;
+#undef Xv1
+#undef Xv2
+#undef Xv3
+#undef Yv1
+#undef Yv2
+#undef Yv3
+#undef Px
+#undef Py
+        u -= w0 * m_calib[0].errU + w1 * m_calib[1].errU + w2 * m_calib[2].errU;
+        v -= w0 * m_calib[0].errV + w1 * m_calib[1].errV + w2 * m_calib[2].errV;
+    }
 }
 
 void AStimulus::Tick(float DeltaTime)
@@ -171,6 +244,8 @@ void AStimulus::Tick(float DeltaTime)
         float cAlpha = FVector::DotProduct(gazeVecXY, FVector(0.0f, 1.0f, 0.0f));
         float cBeta = FVector::DotProduct(gazeVecXZ, FVector(0.0f, 0.0f, 1.0f));
         //GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), cAlpha, cBeta));
+
+        applyCalib(cAlpha, cBeta, u, v);
 
 #ifdef EYE_DEBUG
         m_u = u;
@@ -235,6 +310,13 @@ void AStimulus::Tick(float DeltaTime)
         m_dynContour->UpdateResource();
         m_needsUpdate = false;
         m_imgUpdated = true;
+    }
+
+    if (m_needsUpdateCalib)
+    {
+        lock_guard<mutex> lock(m_mutex);
+        m_calib = m_calibBack;
+        m_needsUpdateCalib = false;
     }
 }
 

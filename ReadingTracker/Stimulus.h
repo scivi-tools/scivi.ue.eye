@@ -48,6 +48,15 @@ private:
 		TArray<FVector2D> path;
 		BBox bbox;
 	};
+	struct CalibPt
+	{
+		float cAlpha;
+		float cBeta;
+		float errU;
+		float errV;
+		CalibPt(cA, cB, eU, eV): cAlpha(cA), cBeta(cB), errU(eU), errV(eV) {};
+		float pDist(float ca, float cb) const { return (cAlpha - ca) * (cAlpha - ca) + (cBeta - cb) * (cBeta - cb); };
+	};
 
 	WSServer m_server;
 	thread m_serverThread;
@@ -62,6 +71,7 @@ private:
 	int m_dynTexH;
 	TArray<AOI> m_dynAOIs;
 	atomic<bool> m_needsUpdate;
+	atomic<bool> m_needsUpdateCalib;
 
 	bool m_inSelectionMode;
 	bool m_rReleased;
@@ -75,6 +85,8 @@ private:
 	float m_u;
 	float m_v;
 #endif // EYE_DEBUG
+	TArray<CalibPt> m_calibBack;
+	TArray<CalibPt> m_calib;
 	
 	APlayerCameraManager* m_camera;
 
@@ -90,6 +102,7 @@ private:
 	int findActiveAOI(const FVector2D& pt) const;
 	void toggleSelectedAOI(int aoi);
 	void calibrate();
+	void applyCalib(float ca, float cb, float &u, float &v);
 	
 protected:
 	virtual void BeginPlay() override;
