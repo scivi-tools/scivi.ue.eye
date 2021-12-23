@@ -55,7 +55,7 @@ private:
 		float errU;
 		float errV;
 		CalibPt(float cA, float cB, float eU, float eV): cAlpha(cA), cBeta(cB), errU(eU), errV(eV) {};
-		float pDist(float ca, float cb) const { return (cAlpha - ca) * (cAlpha - ca) + (cBeta - cb) * (cBeta - cb); };
+		float pDist(float ca, float cb) const { return fabs(cAlpha - ca) + fabs(cBeta - cb); };
 	};
 
 	WSServer m_server;
@@ -84,6 +84,8 @@ private:
 #ifdef EYE_DEBUG
 	float m_u;
 	float m_v;
+	float m_cu;
+	float m_cv;
 #endif // EYE_DEBUG
 	TArray<CalibPt> m_calibBack;
 	TArray<CalibPt> m_calib;

@@ -36,7 +36,7 @@ AStimulus::AStimulus()
     m_camera = nullptr;
 
 #ifdef EYE_DEBUG
-    m_u = m_v = 0.0f;
+    m_u = m_v = m_cu = m_cv = 0.0f;
 #endif // EYE_DEBUG
 }
 
@@ -156,12 +156,12 @@ void AStimulus::initWS()
 
     epCalib.on_open = [](shared_ptr<WSServer::Connection> connection)
     {
-        UE_LOG(LogTemp, Display, TEXT("WebSocket: Opened"));
+        UE_LOG(LogTemp, Display, TEXT("[calib] WebSocket: Opened"));
     };
 
     epCalib.on_close = [](shared_ptr<WSServer::Connection> connection, int status, const string&)
     {
-        UE_LOG(LogTemp, Display, TEXT("WebSocket: Closed"));
+        UE_LOG(LogTemp, Display, TEXT("[calib] WebSocket: Closed"));
     };
 
     epCalib.on_handshake = [](shared_ptr<WSServer::Connection>, SimpleWeb::CaseInsensitiveMultimap&)
@@ -171,7 +171,7 @@ void AStimulus::initWS()
 
     epCalib.on_error = [](shared_ptr<WSServer::Connection> connection, const SimpleWeb::error_code& ec)
     {
-        UE_LOG(LogTemp, Warning, TEXT("WebSocket: Error"));
+        UE_LOG(LogTemp, Warning, TEXT("[calib] WebSocket: Error"));
     };
     ///////////////////
 
@@ -187,6 +187,7 @@ void AStimulus::applyCalib(float ca, float cb, float &u, float &v)
 {
     if (m_calib.Num() > 0)
     {
+        //UE_LOG(LogTemp, Warning, TEXT("apply calib"));
         m_calib.Sort([ca, cb](const CalibPt &cpt1, const CalibPt &cpt2) { return cpt1.pDist(ca, cb) < cpt2.pDist(ca, cb); });
 #define Xv1 m_calib[0].cAlpha
 #define Xv2 m_calib[1].cAlpha
@@ -245,11 +246,17 @@ void AStimulus::Tick(float DeltaTime)
         float cBeta = FVector::DotProduct(gazeVecXZ, FVector(0.0f, 0.0f, 1.0f));
         //GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), cAlpha, cBeta));
 
-        applyCalib(cAlpha, cBeta, u, v);
+        GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), vd.right.pupil_position_in_sensor_area.X, vd.right.pupil_position_in_sensor_area.Y));
+        
+
+        //applyCalib(cAlpha, cBeta, u, v);
 
 #ifdef EYE_DEBUG
         m_u = u;
         m_v = v;
+        applyCalib(cAlpha, cBeta, u, v);
+        m_cu = u;
+        m_cv = v;
         int currentAOI = -1;
         if (m_dynContour)
             m_dynContour->UpdateResource();
@@ -445,6 +452,15 @@ void AStimulus::drawContour(UCanvas *cvs, int32 w, int32 h)
     {
         cvs->K2_DrawLine(FVector2D(x + 2.0f * th * cos((float)i / (float)(n - 1) * 2.0f * PI), y + 2.0f * th * sin((float)i / (float)(n - 1) * 2.0f * PI)),
             FVector2D(x + 2.0f * th * cos((float)(i + 1) / (float)(n - 1) * 2.0f * PI), y + 2.0f * th * sin((float)(i + 1) / (float)(n - 1) * 2.0f * PI)), th, color);
+    }
+    float cx = m_cu * m_stimulusW;
+    float cy = m_cv * m_stimulusH;
+    FLinearColor ccolor = FLinearColor(0, 1, 0, 1);
+    
+    for (int i = 0; i < n; ++i)
+    {
+        cvs->K2_DrawLine(FVector2D(cx + 2.0f * th * cos((float)i / (float)(n - 1) * 2.0f * PI), cy + 2.0f * th * sin((float)i / (float)(n - 1) * 2.0f * PI)),
+            FVector2D(cx + 2.0f * th * cos((float)(i + 1) / (float)(n - 1) * 2.0f * PI), cy + 2.0f * th * sin((float)(i + 1) / (float)(n - 1) * 2.0f * PI)), th, ccolor);
     }
 #else
     float th = max(round((float)max(m_stimulusW, m_stimulusH) * 0.0025f), 1.0f);
