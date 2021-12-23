@@ -143,7 +143,7 @@ void AStimulus::initWS()
         if (FJsonSerializer::Deserialize(jsonReader, jsonParsed))
         {
             lock_guard<mutex> lock(m_mutex);
-            auto points = jsonParsed->AsArray();
+            auto points = jsonParsed->GetArrayField("data");
             m_calibBack.Empty();
             for (auto point : points)
             {
@@ -187,7 +187,7 @@ void AStimulus::applyCalib(float ca, float cb, float &u, float &v)
 {
     if (m_calib.Num() > 0)
     {
-        m_calib.Sort([](const CalibPt &cpt1, const CalibPt &cpt2) { return cpt1.pDist(ca, cb) < cpt2.pDist(ca, cb); });
+        m_calib.Sort([ca, cb](const CalibPt &cpt1, const CalibPt &cpt2) { return cpt1.pDist(ca, cb) < cpt2.pDist(ca, cb); });
 #define Xv1 m_calib[0].cAlpha
 #define Xv2 m_calib[1].cAlpha
 #define Xv3 m_calib[2].cAlpha

@@ -54,7 +54,7 @@ private:
 		float cBeta;
 		float errU;
 		float errV;
-		CalibPt(cA, cB, eU, eV): cAlpha(cA), cBeta(cB), errU(eU), errV(eV) {};
+		CalibPt(float cA, float cB, float eU, float eV): cAlpha(cA), cBeta(cB), errU(eU), errV(eV) {};
 		float pDist(float ca, float cb) const { return (cAlpha - ca) * (cAlpha - ca) + (cBeta - cb) * (cBeta - cb); };
 	};
 
