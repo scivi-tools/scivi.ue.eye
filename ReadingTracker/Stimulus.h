@@ -59,8 +59,9 @@ private:
 	};
 	struct CalibQ
 	{
-		FQuat qgaz; // rotate from cam to gaze
+		FVector2D eyePos;
 		FQuat qerr; // rotate from gaze to real
+		float pDist(FVector2D &p) const { return FVector2D::DistSquared(eyePos, p); };
 	};
 
 	WSServer m_server;
@@ -112,6 +113,7 @@ private:
 	void toggleSelectedAOI(int aoi);
 	void calibrate();
 	void applyCalib(float ca, float cb, float &u, float &v);
+	bool focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeTarget);
 	
 protected:
 	virtual void BeginPlay() override;
