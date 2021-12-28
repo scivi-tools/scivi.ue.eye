@@ -36,6 +36,8 @@ AStimulus::AStimulus()
 
     m_camera = nullptr;
 
+    m_dt = 0;
+
 #ifdef EYE_DEBUG
     m_u = m_v = m_cu = m_cv = 0.0f;
 #endif // EYE_DEBUG
@@ -214,20 +216,21 @@ void AStimulus::applyCalib(float ca, float cb, float &u, float &v)
     }
 }
 
-bool AStimulus::focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeTarget)
+bool AStimulus::focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeTarget, float ca, float cb, float dt, GazeIndex gi, bool cam)
 {
-    if (m_calibQ.Num() < 9)
+    /*if (m_calibQ.Num() < 3)
     {
         return USRanipalEye_FunctionLibrary::Focus(GazeIndex::COMBINE, 1000.0f, 1.0f, m_camera, ECollisionChannel::ECC_WorldStatic, focusInfo, gazeOrigin, gazeTarget);
     }
-    else
+    else*/
     {
-        ViveSR::anipal::Eye::VerboseData vd;
-        SRanipalEye_Core::Instance()->GetVerboseData(vd);
-        FVector2D eyePos((vd.right.pupil_position_in_sensor_area.X + vd.left.pupil_position_in_sensor_area.X) / 2.0f,
-                         (vd.right.pupil_position_in_sensor_area.Y + vd.left.pupil_position_in_sensor_area.Y) / 2.0f);
+        //ViveSR::anipal::Eye::VerboseData vd;
+        //SRanipalEye_Core::Instance()->GetVerboseData(vd);
+        FVector2D eyePos(ca, cb);
+        FQuat err;
         
-        m_calibQ.Sort([eyePos](const CalibQ &c1, const CalibQ &c2) { return c1.pDist(eyePos) < c2.pDist(eyePos); });
+        if (m_calibQ.Num() >= 3) {
+            m_calibQ.Sort([eyePos](const CalibQ& c1, const CalibQ& c2) { return c1.pDist(eyePos) < c2.pDist(eyePos); });
 #define Xv1 m_calibQ[0].eyePos.X
 #define Xv2 m_calibQ[1].eyePos.X
 #define Xv3 m_calibQ[2].eyePos.X
@@ -236,9 +239,9 @@ bool AStimulus::focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeT
 #define Yv3 m_calibQ[2].eyePos.Y
 #define Px eyePos.X
 #define Py eyePos.Y
-        float w0 = ((Yv2 - Yv3) * (Px - Xv3) + (Xv3 - Xv2) * (Py - Yv3)) / ((Yv2 - Yv3) * (Xv1 - Xv3) + (Xv3 - Xv2) * (Yv1 - Yv3));
-        float w1 = ((Yv3 - Yv1) * (Px - Xv3) + (Xv1 - Xv3) * (Py - Yv3)) / ((Yv2 - Yv3) * (Xv1 - Xv3) + (Xv3 - Xv2) * (Yv1 - Yv3));
-        float w2 = 1.0f - w0 - w1;
+            float w0 = ((Yv2 - Yv3) * (Px - Xv3) + (Xv3 - Xv2) * (Py - Yv3)) / ((Yv2 - Yv3) * (Xv1 - Xv3) + (Xv3 - Xv2) * (Yv1 - Yv3));
+            float w1 = ((Yv3 - Yv1) * (Px - Xv3) + (Xv1 - Xv3) * (Py - Yv3)) / ((Yv2 - Yv3) * (Xv1 - Xv3) + (Xv3 - Xv2) * (Yv1 - Yv3));
+            float w2 = 1.0f - w0 - w1;
 #undef Xv1
 #undef Xv2
 #undef Xv3
@@ -247,8 +250,12 @@ bool AStimulus::focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeT
 #undef Yv3
 #undef Px
 #undef Py
-        
-        FQuat err = w0 * m_calibQ[0].qerr + w1 * m_calibQ[1].qerr + w2 * m_calib[2].qerr;
+
+            err = m_calibQ[0].qerr * w0 + m_calibQ[1].qerr * w1 + m_calibQ[2].qerr * w2;
+            //FQuat err = FQuat::FastLerp(m_calibQ[0].qerr, FQuat::Identity, (dt - m_calibQ[0].dt) / (1.0f - m_calibQ[0].dt));
+            //Quat err = FQuat::FastLerp(m_err, FQuat::Identity, (dt - m_dt) / (1.0f - m_dt));
+            err.Normalize();
+        }
 
         GazeIndex gazeIndex = GazeIndex::COMBINE;
         float maxDistance = 1000.0f;
@@ -265,13 +272,18 @@ bool AStimulus::focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeT
         FHitResult hitResult;
         bool hit = false;
 
-        if (GetGazeRay(GazeIndex::COMBINE, CameraGazeOrigin, CameraGazeDirection)) {
+        if (USRanipalEye_FunctionLibrary::GetGazeRay(gi, CameraGazeOrigin, CameraGazeDirection)) {
             // Find the ray cast origin and target positon.
             PlayerMainCameraLocation = playerCamera->GetCameraLocation();
             PlayerMainCameraRotation = playerCamera->GetCameraRotation();
             RayCastOrigin = PlayerMainCameraLocation;
-            RayCastDirection = (PlayerMainCameraRotation.RotateVector(CameraGazeDirection) * maxDistance) + PlayerMainCameraLocation;
-            RayCastDirection = err.RotateVector(RayCastDirection);
+            if (cam)
+                RayCastDirection = (PlayerMainCameraRotation.RotateVector(FVector::ForwardVector) * maxDistance) + PlayerMainCameraLocation;
+            else
+            {
+                //CameraGazeDirection = err.RotateVector(CameraGazeDirection);
+                RayCastDirection = (err.RotateVector(PlayerMainCameraRotation.RotateVector(CameraGazeDirection)) * maxDistance) + PlayerMainCameraLocation;
+            }
             gazeOrigin = RayCastOrigin;
             gazeTarget = RayCastDirection;
 
@@ -320,7 +332,7 @@ void AStimulus::Tick(float DeltaTime)
 
     FFocusInfo focusInfo;
     FVector gazeOrigin, gazeTarget;
-    bool hit = focus(focusInfo, gazeOrigin, gazeTarget);
+    bool hit = USRanipalEye_FunctionLibrary::Focus(GazeIndex::COMBINE, 1000.0f, 1.0f, m_camera, ECollisionChannel::ECC_WorldStatic, focusInfo, gazeOrigin, gazeTarget);
     if (hit && focusInfo.actor == this)
     {
         FVector actorOrigin, actorExtent;
@@ -335,21 +347,22 @@ void AStimulus::Tick(float DeltaTime)
         //UE_LOG(LogTemp, Warning, TEXT("pupil %f %f"), vd.left.pupil_diameter_mm, vd.right.pupil_diameter_mm);
         bool selected = false;
 
-        /*FVector gazeVec = gazeTarget - gazeOrigin;
+        FVector gazeVec = gazeTarget - gazeOrigin;
         gazeVec.Normalize();
         FQuat headOrientation = m_camera->GetCameraRotation().Quaternion();
         gazeVec = headOrientation.UnrotateVector(gazeVec);
+        float dt = FVector::DotProduct(gazeVec, FVector::ForwardVector);
         FVector gazeVecXY(gazeVec.X, gazeVec.Y, 0.0f);
         gazeVecXY.Normalize();
         FVector gazeVecXZ(gazeVec.X, 0.0f, gazeVec.Z);
         gazeVecXZ.Normalize();
         float cAlpha = FVector::DotProduct(gazeVecXY, FVector(0.0f, 1.0f, 0.0f));
-        float cBeta = FVector::DotProduct(gazeVecXZ, FVector(0.0f, 0.0f, 1.0f));*/
+        float cBeta = FVector::DotProduct(gazeVecXZ, FVector(0.0f, 0.0f, 1.0f));
         //GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), cAlpha, cBeta));
 
         //GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), vd.right.pupil_position_in_sensor_area.X, vd.right.pupil_position_in_sensor_area.Y));
         
-        if (m_rReleased && m_calibIndex < 9)
+        if (m_rReleased /*&& m_calibIndex < 9*/)
         {
             const FVector2D calibRefs[] = 
             {
@@ -362,14 +375,41 @@ void AStimulus::Tick(float DeltaTime)
                             actorOrigin.Y,
                             (2.0f * (1.0f - realUV.Y) - 1.0f) * actorExtent.Z + actorOrigin.Z);
             FVector realGaze = realPos - gazeOrigin;
+
+            ////////////////
+            /*realGaze.Normalize();
+            realGaze *= 1000;
+            FCollisionQueryParams traceParam;
+            FHitResult hitResult;
+            FCollisionShape sphear = FCollisionShape();
+            TEnumAsByte<ECollisionChannel> TraceChannel = ECollisionChannel::ECC_WorldStatic;
+            sphear.SetSphere(1);
+            m_camera->GetWorld()->SweepSingleByChannel(
+                hitResult,
+                gazeOrigin, realGaze,
+                FQuat(0.f, 0.f, 0.f, 0.f),
+                TraceChannel,
+                sphear,
+                traceParam
+            );
+            m_cu2 = 1.0f - ((hitResult.Location.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f;
+            m_cv2 = 1.0f - ((hitResult.Location.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;*/
+            ////////////////
+
+            GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("click"));
+
             FVector gaze = focusInfo.point - gazeOrigin;
             CalibQ cq;
-            cq.eyePos = FVector2D((vd.right.pupil_position_in_sensor_area.X + vd.left.pupil_position_in_sensor_area.X) / 2.0f,
-                                  (vd.right.pupil_position_in_sensor_area.Y + vd.left.pupil_position_in_sensor_area.Y) / 2.0f);
+            cq.eyePos = FVector2D(/*(vd.right.pupil_position_in_sensor_area.X + vd.left.pupil_position_in_sensor_area.X) / 2.0f,
+                                  (vd.right.pupil_position_in_sensor_area.Y + vd.left.pupil_position_in_sensor_area.Y) / 2.0f*/
+                                  cAlpha, cBeta);
             cq.qerr = FQuat::FindBetween(gaze, realGaze);
-            // cq.qgaz = FQuat::FindBetween(headOrientation.GetForwardVector(), gaze);
-            // cq.qerr = FQuat::FindBetween(gaze, real);
+            cq.dt = dt;
+            //cq.qgaz = FQuat::FindBetween(headOrientation.GetForwardVector(), gaze);
+            //cq.qerr = FQuat::FindBetween(gaze, real);
             m_calibQ.Add(cq);
+            //m_err = cq.qerr;
+            //m_dt = cq.dt;
         }
 
 
@@ -378,6 +418,17 @@ void AStimulus::Tick(float DeltaTime)
 #ifdef EYE_DEBUG
         m_u = u;
         m_v = v;
+
+       // if (m_calibQ.Num() == 9)
+        {
+            focus(focusInfo, gazeOrigin, gazeTarget, cAlpha, cBeta, dt, GazeIndex::COMBINE, false);
+            m_cu = 1.0f - ((focusInfo.point.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f;
+            m_cv = 1.0f - ((focusInfo.point.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;
+
+            focus(focusInfo, gazeOrigin, gazeTarget, cAlpha, cBeta, dt, GazeIndex::COMBINE, true);
+            m_cu2 = 1.0f - ((focusInfo.point.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f;
+            m_cv2 = 1.0f - ((focusInfo.point.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;
+        }
         /*applyCalib(cAlpha, cBeta, u, v);
         m_cu = u;
         m_cv = v;*/
@@ -593,6 +644,15 @@ void AStimulus::drawContour(UCanvas *cvs, int32 w, int32 h)
     float cy = m_cv * m_stimulusH;
     FLinearColor ccolor = FLinearColor(0, 1, 0, 1);
     
+    for (int i = 0; i < n; ++i)
+    {
+        cvs->K2_DrawLine(FVector2D(cx + 2.0f * th * cos((float)i / (float)(n - 1) * 2.0f * PI), cy + 2.0f * th * sin((float)i / (float)(n - 1) * 2.0f * PI)),
+            FVector2D(cx + 2.0f * th * cos((float)(i + 1) / (float)(n - 1) * 2.0f * PI), cy + 2.0f * th * sin((float)(i + 1) / (float)(n - 1) * 2.0f * PI)), th, ccolor);
+    }
+
+    cx = m_cu2 * m_stimulusW;
+    cy = m_cv2 * m_stimulusH;
+    ccolor = FLinearColor(1, 0, 1, 1);
     for (int i = 0; i < n; ++i)
     {
         cvs->K2_DrawLine(FVector2D(cx + 2.0f * th * cos((float)i / (float)(n - 1) * 2.0f * PI), cy + 2.0f * th * sin((float)i / (float)(n - 1) * 2.0f * PI)),

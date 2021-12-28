@@ -61,7 +61,8 @@ private:
 	{
 		FVector2D eyePos;
 		FQuat qerr; // rotate from gaze to real
-		float pDist(FVector2D &p) const { return FVector2D::DistSquared(eyePos, p); };
+		float dt;
+		float pDist(const FVector2D &p) const { return FVector2D::DistSquared(eyePos, p); };
 	};
 
 	WSServer m_server;
@@ -93,10 +94,14 @@ private:
 	float m_v;
 	float m_cu;
 	float m_cv;
+	float m_cu2;
+	float m_cv2;
 #endif // EYE_DEBUG
 	TArray<CalibPt> m_calibBack;
 	TArray<CalibPt> m_calib;
 	TArray<CalibQ> m_calibQ;
+	FQuat m_err;
+	float m_dt;
 	
 	APlayerCameraManager* m_camera;
 
@@ -113,7 +118,7 @@ private:
 	void toggleSelectedAOI(int aoi);
 	void calibrate();
 	void applyCalib(float ca, float cb, float &u, float &v);
-	bool focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeTarget);
+	bool focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeTarget, float ca, float cb, float dt, GazeIndex gi, bool cam);
 	
 protected:
 	virtual void BeginPlay() override;
