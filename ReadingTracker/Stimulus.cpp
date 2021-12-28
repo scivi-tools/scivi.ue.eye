@@ -229,7 +229,7 @@ bool AStimulus::focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeT
         FVector2D eyePos(ca, cb);
         FQuat err;
         
-        if (m_calibQ.Num() > 0) {
+        if (m_calibQ.Num() > 1) {
             // m_calibQ.Sort([eyePos](const CalibQ& c1, const CalibQ& c2) { return c1.pDist(eyePos) < c2.pDist(eyePos); });
             m_calibQ.Sort([ca](const CalibQ& c1, const CalibQ& c2) { return fabs(c1.a - ca) < fabs(c2.a - ca); });
 /*#define Xv1 m_calibQ[0].eyePos.X
@@ -253,7 +253,8 @@ bool AStimulus::focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeT
 #undef Py
 */
             // err = m_calibQ[0].qerr * w0 + m_calibQ[1].qerr * w1 + m_calibQ[2].qerr * w2;
-            FQuat err = FQuat::FastLerp(m_calibQ[0].qerr, FQuat::Identity, (dt - m_calibQ[0].dt) / (1.0f - m_calibQ[0].dt));
+            FQuat base = FQuat::FastLerp(m_calibQ[0].qerr, m_calibQ[1].qerr, (ca - m_calibQ[0].a) / (m_calibQ[1].a - m_calibQ[0].a));
+            err = FQuat::FastLerp(base, FQuat::Identity, (dt - m_calibQ[0].dt) / (1.0f - m_calibQ[0].dt));
             //Quat err = FQuat::FastLerp(m_err, FQuat::Identity, (dt - m_dt) / (1.0f - m_dt));
             err.Normalize();
         }
