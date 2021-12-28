@@ -368,7 +368,7 @@ void AStimulus::Tick(float DeltaTime)
             const FVector2D calibRefs[] = 
             {
                 FVector2D(0.05, 0.05), FVector2D(0.5, 0.05), FVector2D(0.95, 0.05),
-                FVector2D(0.05, 0.5), FVector2D(0.5, 0.5), FVector2D(0.95, 0.5),
+                FVector2D(0.05, 0.5), /*FVector2D(0.5, 0.5),*/ FVector2D(0.95, 0.5),
                 FVector2D(0.05, 0.95), FVector2D(0.5, 0.95), FVector2D(0.95, 0.95)
             };
             FVector2D realUV = calibRefs[m_calibIndex++];
