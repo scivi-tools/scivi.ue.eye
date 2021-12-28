@@ -226,13 +226,13 @@ bool AStimulus::focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeT
     {
         //ViveSR::anipal::Eye::VerboseData vd;
         //SRanipalEye_Core::Instance()->GetVerboseData(vd);
-        FVector2D eyePos(ca, cb);
+        FVector2D eyePos(ca, dt);
         FQuat err;
         
-        if (m_calibQ.Num() > 0) {
-            // m_calibQ.Sort([eyePos](const CalibQ& c1, const CalibQ& c2) { return c1.pDist(eyePos) < c2.pDist(eyePos); });
-            m_calibQ.Sort([ca](const CalibQ& c1, const CalibQ& c2) { return fabs(c1.a - ca) < fabs(c2.a - ca); });
-/*#define Xv1 m_calibQ[0].eyePos.X
+        if (m_calibQ.Num() >= 3) {
+            m_calibQ.Sort([eyePos](const CalibQ& c1, const CalibQ& c2) { return c1.pDist(eyePos) < c2.pDist(eyePos); });
+            // m_calibQ.Sort([ca](const CalibQ& c1, const CalibQ& c2) { return fabs(c1.a - ca) < fabs(c2.a - ca); });
+#define Xv1 m_calibQ[0].eyePos.X
 #define Xv2 m_calibQ[1].eyePos.X
 #define Xv3 m_calibQ[2].eyePos.X
 #define Yv1 m_calibQ[0].eyePos.Y
@@ -251,9 +251,9 @@ bool AStimulus::focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeT
 #undef Yv3
 #undef Px
 #undef Py
-*/
-            // err = m_calibQ[0].qerr * w0 + m_calibQ[1].qerr * w1 + m_calibQ[2].qerr * w2;
-            FQuat err = FQuat::FastLerp(m_calibQ[0].qerr, FQuat::Identity, (dt - m_calibQ[0].dt) / (1.0f - m_calibQ[0].dt));
+
+            err = m_calibQ[0].qerr * w0 + m_calibQ[1].qerr * w1 + m_calibQ[2].qerr * w2;
+            // FQuat err = FQuat::FastLerp(m_calibQ[0].qerr, FQuat::Identity, (dt - m_calibQ[0].dt) / (1.0f - m_calibQ[0].dt));
             //Quat err = FQuat::FastLerp(m_err, FQuat::Identity, (dt - m_dt) / (1.0f - m_dt));
             err.Normalize();
         }
@@ -368,7 +368,9 @@ void AStimulus::Tick(float DeltaTime)
             const FVector2D calibRefs[] = 
             {
                 FVector2D(0.05, 0.05), FVector2D(0.5, 0.05), FVector2D(0.95, 0.05),
-                FVector2D(0.05, 0.5), /*FVector2D(0.5, 0.5),*/ FVector2D(0.95, 0.5),
+                FVector2D(0.275, 0.275), FVector2D(0.725, 0.275),
+                FVector2D(0.05, 0.5), FVector2D(0.5, 0.5), FVector2D(0.95, 0.5),
+                FVector2D(0.275, 0.725), FVector2D(0.725, 0.725),
                 FVector2D(0.05, 0.95), FVector2D(0.5, 0.95), FVector2D(0.95, 0.95)
             };
             FVector2D realUV = calibRefs[m_calibIndex++];
