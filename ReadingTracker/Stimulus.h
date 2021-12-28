@@ -59,10 +59,12 @@ private:
 	};
 	struct CalibQ
 	{
-		FVector2D eyePos;
+		//FVector2D eyePos;
+		float a;
 		FQuat qerr; // rotate from gaze to real
 		float dt;
-		float pDist(const FVector2D &p) const { return FVector2D::DistSquared(eyePos, p); };
+		// float pDist(const FVector2D &p) const { return FVector2D::DistSquared(eyePos, p); };
+		float pDist(const CalibQ &p) const { return a - p.a; };
 	};
 
 	WSServer m_server;

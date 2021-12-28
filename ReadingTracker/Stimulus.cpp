@@ -229,9 +229,10 @@ bool AStimulus::focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeT
         FVector2D eyePos(ca, cb);
         FQuat err;
         
-        if (m_calibQ.Num() >= 3) {
-            m_calibQ.Sort([eyePos](const CalibQ& c1, const CalibQ& c2) { return c1.pDist(eyePos) < c2.pDist(eyePos); });
-#define Xv1 m_calibQ[0].eyePos.X
+        if (m_calibQ.Num() > 0) {
+            // m_calibQ.Sort([eyePos](const CalibQ& c1, const CalibQ& c2) { return c1.pDist(eyePos) < c2.pDist(eyePos); });
+            m_calibQ.Sort([ca](const CalibQ& c1, const CalibQ& c2) { return fabs(c1.a - ca) < fabs(c2.a - ca); });
+/*#define Xv1 m_calibQ[0].eyePos.X
 #define Xv2 m_calibQ[1].eyePos.X
 #define Xv3 m_calibQ[2].eyePos.X
 #define Yv1 m_calibQ[0].eyePos.Y
@@ -250,9 +251,9 @@ bool AStimulus::focus(FFocusInfo &focusInfo, FVector &gazeOrigin, FVector &gazeT
 #undef Yv3
 #undef Px
 #undef Py
-
-            err = m_calibQ[0].qerr * w0 + m_calibQ[1].qerr * w1 + m_calibQ[2].qerr * w2;
-            //FQuat err = FQuat::FastLerp(m_calibQ[0].qerr, FQuat::Identity, (dt - m_calibQ[0].dt) / (1.0f - m_calibQ[0].dt));
+*/
+            // err = m_calibQ[0].qerr * w0 + m_calibQ[1].qerr * w1 + m_calibQ[2].qerr * w2;
+            FQuat err = FQuat::FastLerp(m_calibQ[0].qerr, FQuat::Identity, (dt - m_calibQ[0].dt) / (1.0f - m_calibQ[0].dt));
             //Quat err = FQuat::FastLerp(m_err, FQuat::Identity, (dt - m_dt) / (1.0f - m_dt));
             err.Normalize();
         }
@@ -347,7 +348,7 @@ void AStimulus::Tick(float DeltaTime)
         //UE_LOG(LogTemp, Warning, TEXT("pupil %f %f"), vd.left.pupil_diameter_mm, vd.right.pupil_diameter_mm);
         bool selected = false;
 
-        FVector gazeVec = gazeTarget - gazeOrigin;
+        FVector gazeVec = /*gazeTarget*/focusInfo.point - gazeOrigin;
         gazeVec.Normalize();
         FQuat headOrientation = m_camera->GetCameraRotation().Quaternion();
         gazeVec = headOrientation.UnrotateVector(gazeVec);
@@ -356,8 +357,8 @@ void AStimulus::Tick(float DeltaTime)
         gazeVecXY.Normalize();
         FVector gazeVecXZ(gazeVec.X, 0.0f, gazeVec.Z);
         gazeVecXZ.Normalize();
-        float cAlpha = FVector::DotProduct(gazeVecXY, FVector(0.0f, 1.0f, 0.0f));
-        float cBeta = FVector::DotProduct(gazeVecXZ, FVector(0.0f, 0.0f, 1.0f));
+        float cAlpha = atan2(gazeVec.Y, gazeVec.Z);//FVector::DotProduct(gazeVecXY, FVector(0.0f, 1.0f, 0.0f));
+        float cBeta = 0;//FVector::DotProduct(gazeVecXZ, FVector(0.0f, 0.0f, 1.0f));
         //GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), cAlpha, cBeta));
 
         //GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), vd.right.pupil_position_in_sensor_area.X, vd.right.pupil_position_in_sensor_area.Y));
@@ -400,9 +401,10 @@ void AStimulus::Tick(float DeltaTime)
 
             FVector gaze = focusInfo.point - gazeOrigin;
             CalibQ cq;
-            cq.eyePos = FVector2D(/*(vd.right.pupil_position_in_sensor_area.X + vd.left.pupil_position_in_sensor_area.X) / 2.0f,
-                                  (vd.right.pupil_position_in_sensor_area.Y + vd.left.pupil_position_in_sensor_area.Y) / 2.0f*/
-                                  cAlpha, cBeta);
+            // cq.eyePos = FVector2D(/*(vd.right.pupil_position_in_sensor_area.X + vd.left.pupil_position_in_sensor_area.X) / 2.0f,
+                                  // (vd.right.pupil_position_in_sensor_area.Y + vd.left.pupil_position_in_sensor_area.Y) / 2.0f*/
+                                  // cAlpha, cBeta);
+            cq.a = cAlpha;
             cq.qerr = FQuat::FindBetween(gaze, realGaze);
             cq.dt = dt;
             //cq.qgaz = FQuat::FindBetween(headOrientation.GetForwardVector(), gaze);
