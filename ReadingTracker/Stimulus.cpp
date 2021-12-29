@@ -364,7 +364,7 @@ void AStimulus::Tick(float DeltaTime)
 
         //GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f %f"), vd.right.pupil_position_in_sensor_area.X, vd.right.pupil_position_in_sensor_area.Y));
         
-        if (m_rReleased /*&& m_calibIndex < 9*/)
+        if (m_rReleased && m_calibIndex < 13)
         {
             const FVector2D calibRefs[] = 
             {
@@ -471,9 +471,9 @@ void AStimulus::Tick(float DeltaTime)
                      to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
                      to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z) + " " +
                      /*to_string(vd.left.pupil_diameter_mm) + " " + to_string(vd.right.pupil_diameter_mm) +*/
-                     /*to_string(cAlpha) + " " + to_string(cBeta) + */
-                     to_string((vd.right.pupil_position_in_sensor_area.X + vd.left.pupil_position_in_sensor_area.X) / 2.0f) + " " + 
-                     to_string((vd.right.pupil_position_in_sensor_area.Y + vd.left.pupil_position_in_sensor_area.Y) / 2.0f) + " " +
+                     to_string(m_cu) + " " + to_string(m_cv) + 
+                     /*to_string((vd.right.pupil_position_in_sensor_area.X + vd.left.pupil_position_in_sensor_area.X) / 2.0f) + " " + 
+                     to_string((vd.right.pupil_position_in_sensor_area.Y + vd.left.pupil_position_in_sensor_area.Y) / 2.0f) + " " +*/
                      to_string(currentAOI);
         string msgToSend = msg + (selected ? " SELECT" : " LOOKAT");
         for (auto& connection : m_server.get_connections())
