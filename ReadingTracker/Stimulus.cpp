@@ -471,7 +471,7 @@ void AStimulus::Tick(float DeltaTime)
                      to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
                      to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z) + " " +
                      /*to_string(vd.left.pupil_diameter_mm) + " " + to_string(vd.right.pupil_diameter_mm) +*/
-                     to_string(m_cu) + " " + to_string(m_cv) + 
+                     to_string(m_cu) + " " + to_string(m_cv) + " " +
                      /*to_string((vd.right.pupil_position_in_sensor_area.X + vd.left.pupil_position_in_sensor_area.X) / 2.0f) + " " + 
                      to_string((vd.right.pupil_position_in_sensor_area.Y + vd.left.pupil_position_in_sensor_area.Y) / 2.0f) + " " +*/
                      to_string(currentAOI);
