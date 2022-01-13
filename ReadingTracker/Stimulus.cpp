@@ -404,10 +404,10 @@ void AStimulus::Tick(float DeltaTime)
 
             FVector gaze = focusInfo.point - gazeOrigin;
             CalibQ cq;
-            // cq.eyePos = FVector2D(/*(vd.right.pupil_position_in_sensor_area.X + vd.left.pupil_position_in_sensor_area.X) / 2.0f,
-                                  // (vd.right.pupil_position_in_sensor_area.Y + vd.left.pupil_position_in_sensor_area.Y) / 2.0f*/
+            cq.eyePos = FVector2D((vd.right.gaze_direction_normalized.X + vd.left.gaze_direction_normalized.X) / 2.0f,
+                                  (vd.right.gaze_direction_normalized.Y + vd.left.gaze_direction_normalized.Y) / 2.0f);
                                   // cAlpha, cBeta);
-            cq.eyePos = FVector2D(gazeVec.Y, gazeVec.Z);
+            //cq.eyePos = FVector2D(gazeVec.Y, gazeVec.Z);
             // cq.a = cAlpha;
             cq.qerr = FQuat::FindBetween(gaze, realGaze);
             // cq.dt = dt;
@@ -427,11 +427,11 @@ void AStimulus::Tick(float DeltaTime)
 
        // if (m_calibQ.Num() == 9)
         {
-            focus(focusInfo, gazeOrigin, gazeTarget, gazeVec.Y, gazeVec.Z, dt, GazeIndex::COMBINE, false);
+            focus(focusInfo, gazeOrigin, gazeTarget, (vd.right.gaze_direction_normalized.X + vd.left.gaze_direction_normalized.X) / 2.0f, (vd.right.gaze_direction_normalized.Y + vd.left.gaze_direction_normalized.Y) / 2.0f, dt, GazeIndex::COMBINE, false);
             m_cu = 1.0f - ((focusInfo.point.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f;
             m_cv = 1.0f - ((focusInfo.point.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;
 
-            focus(focusInfo, gazeOrigin, gazeTarget, gazeVec.Y, gazeVec.Z, dt, GazeIndex::COMBINE, true);
+            focus(focusInfo, gazeOrigin, gazeTarget, (vd.right.gaze_direction_normalized.X + vd.left.gaze_direction_normalized.X) / 2.0f, (vd.right.gaze_direction_normalized.Y + vd.left.gaze_direction_normalized.Y) / 2.0f, dt, GazeIndex::COMBINE, true);
             m_cu2 = 1.0f - ((focusInfo.point.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f;
             m_cv2 = 1.0f - ((focusInfo.point.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f;
         }
