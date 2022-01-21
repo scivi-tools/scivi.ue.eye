@@ -36,7 +36,6 @@ AStimulus::AStimulus()
     m_camera = nullptr;
 
     m_needsCustomCalib = false;
-    m_customCalibTargetTex = nullptr;
     m_customCalibSamples = 0;
 }
 
@@ -248,18 +247,6 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
         m_customCalibSamples = 0;
         m_customCalibPoints.Empty();
         m_needsCustomCalib = false;
-        if (!m_customCalibTargetTex)
-        {
-            m_customCalibTargetTex = UTexture2D::CreateTransient(1, 1, PF_B8G8R8A8);
-            if (m_customCalibTargetTex)
-            {
-                uint8_t *textureData = reinterpret_cast<uint8_t *>(m_customCalibTargetTex->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
-                textureData[0] = textureData[0] = textureData[0] = 0x0;
-                textureData[0] = 0xFF;
-                m_customCalibTargetTex->PlatformData->Mips[0].BulkData.Unlock();
-                m_customCalibTargetTex->UpdateResource();
-            }
-        }
     }
 
     switch (m_customCalibPhase)
@@ -347,8 +334,8 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
                 m_customCalibPhase = CalibPhase::Done;
             else
             {
-                FVector2D posTo((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW - 1) + START_POSITION,
-                                (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN - 1) + START_POSITION);
+                FVector2D posTo((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW) + START_POSITION,
+                                (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN) + START_POSITION);
                 ++m_customCalibSamples;
                 if (m_customCalibSamples == SAMPLES_TO_MOVE)
                 {
@@ -362,8 +349,8 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
                 else
                 {
                     --idx;
-                    FVector2D posFrom((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW - 1) + START_POSITION,
-                                      (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN - 1) + START_POSITION);
+                    FVector2D posFrom((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW) + START_POSITION,
+                                      (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN) + START_POSITION);
                     m_customCalibTarget.location = FVector2D(map(m_customCalibSamples, 0, SAMPLES_TO_MOVE, posFrom.X, posTo.X),
                                                              map(m_customCalibSamples, 0, SAMPLES_TO_MOVE, posFrom.Y, posTo.Y));
                 }
@@ -655,7 +642,7 @@ void AStimulus::drawContour(UCanvas *cvs, int32 w, int32 h)
 #endif // EYE_DEBUG
 
     if (m_customCalibPhase != CalibPhase::None && m_customCalibPhase != CalibPhase::Done)
-        fillCircle(cvs, FVector2D(m_customCalibTarget.location.X * m_stimulusW, m_customCalibTarget.location.Y * m_stimulusH), 15.0f);
+        fillCircle(cvs, FVector2D(m_customCalibTarget.location.X * m_stimulusW, m_customCalibTarget.location.Y * m_stimulusH), 10.0f);
 }
 
 bool AStimulus::pointInPolygon(const FVector2D &pt, const TArray<FVector2D> &poly) const

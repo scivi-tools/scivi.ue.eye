@@ -120,7 +120,6 @@ private:
     CalibPhase m_customCalibPhase;
     TArray<CalibPoint> m_customCalibPoints;
     CalibTarget m_customCalibTarget;
-    UTexture2D *m_customCalibTargetTex;
     int m_customCalibSamples;
     FVector m_customCalibAccumReportedGaze;
     FVector m_customCalibAccumRealGaze;
