@@ -59,7 +59,7 @@ private:
         FVector2D location;
         float radius;
 
-        CalibTarget(): float(0.0f) {};
+        CalibTarget(): radius(0.0f) {};
     };
     enum CalibPhase
     {

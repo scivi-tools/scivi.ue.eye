@@ -38,11 +38,6 @@ AStimulus::AStimulus()
     m_needsCustomCalib = false;
     m_customCalibTargetTex = nullptr;
     m_customCalibSamples = 0;
-    m_customCalibCollectedSamples = 0;
-
-#ifdef EYE_DEBUG
-    m_u = m_v = m_cu = m_cv = m_mu = m_mv = 0.0f;
-#endif // EYE_DEBUG
 }
 
 void AStimulus::BeginPlay()
@@ -212,7 +207,7 @@ FQuat AStimulus::barycentric(const FVector2D &gazeLoc, const CalibPoint &cp1, co
     #undef Px
     #undef Py
 
-    FQuat result = cp1.qCorr * w0 + cp2.qCorr * w1 + cp3.qCorr * w3;
+    FQuat result = cp1.qCorr * w0 + cp2.qCorr * w1 + cp3.qCorr * w2;
     result.Normalize();
     return result;
 }
@@ -227,13 +222,13 @@ bool AStimulus::castRay(const FVector &origin, const FVector &ray, FVector &hitP
 
     if (HIT_RADIUS == 0.0f)
     {
-        result = playerCamera->GetWorld()->LineTraceSingleByChannel(hitResult, origin, ray,
+        result = m_camera->GetWorld()->LineTraceSingleByChannel(hitResult, origin, ray,
                                                                     ECollisionChannel::ECC_WorldStatic, traceParam);
     }
     else
     {
         FCollisionShape sph = FCollisionShape();
-        sphear.SetSphere(HIT_RADIUS);
+        sph.SetSphere(HIT_RADIUS);
         result = m_camera->GetWorld()->SweepSingleByChannel(hitResult, origin, ray, FQuat(0.0f, 0.0f, 0.0f, 0.0f),
                                                             ECollisionChannel::ECC_WorldStatic, sph, traceParam);
     }
@@ -258,7 +253,7 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
             m_customCalibTargetTex = UTexture2D::CreateTransient(1, 1, PF_B8G8R8A8);
             if (m_customCalibTargetTex)
             {
-                void *textureData = m_customCalibTargetTex->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
+                uint8_t *textureData = reinterpret_cast<uint8_t *>(m_customCalibTargetTex->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
                 textureData[0] = textureData[0] = textureData[0] = 0x0;
                 textureData[0] = 0xFF;
                 m_customCalibTargetTex->PlatformData->Mips[0].BulkData.Unlock();
@@ -301,9 +296,9 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
             {
                 m_customCalibTarget.location = FVector2D(START_POSITION, START_POSITION);
                 m_customCalibSamples = 0;
-                m_customCalibAccumReportedGaze = FVectorZero;
-                m_customCalibAccumRealGaze = FVectorZero;
-                m_customCalibAccumLocation = FVector2DZero;
+                m_customCalibAccumReportedGaze = FVector(0.0f);
+                m_customCalibAccumRealGaze = FVector(0.0f);
+                m_customCalibAccumLocation = FVector2D(0.0f);
                 m_customCalibPhase = CalibPhase::TargetDecreases;
             }
             else
@@ -359,9 +354,9 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
                 {
                     m_customCalibTarget.location = posTo;
                     m_customCalibSamples = 0;
-                    m_customCalibAccumReportedGaze = FVectorZero;
-                    m_customCalibAccumRealGaze = FVectorZero;
-                    m_customCalibAccumLocation = FVector2DZero;
+                    m_customCalibAccumReportedGaze = FVector(0.0f);
+                    m_customCalibAccumRealGaze = FVector(0.0f);
+                    m_customCalibAccumLocation = FVector2D(0.0f);
                     m_customCalibPhase = CalibPhase::TargetDecreases;
                 }
                 else
@@ -384,8 +379,8 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
             FVector reportedGazeOrigin, reportedGazeDirection;
             if (USRanipalEye_FunctionLibrary::GetGazeRay(GazeIndex::COMBINE, reportedGazeOrigin, reportedGazeDirection))
             {
-                FVector camLocation = m_amera->GetCameraLocation();
-                FRotator camRotation = m_amera->GetCameraRotation();
+                FVector camLocation = m_camera->GetCameraLocation();
+                FRotator camRotation = m_camera->GetCameraRotation();
                 FVector gazeRay = (corr.RotateVector(camRotation.RotateVector(reportedGazeDirection)) * MAX_DISTANCE) + camLocation;
                 if (!castRay(camLocation, gazeRay, correctedGazeTarget))
                     correctedGazeTarget = gazeTarget;
@@ -428,7 +423,7 @@ void AStimulus::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    FVector gazeOrigin, rawGazeTarget, currectedGazeTarget;
+    FVector gazeOrigin, rawGazeTarget, correctedGazeTarget;
     float leftPupilDiam, rightPupilDiam;
     bool needsUpdateDynContour;
     bool hit = focus(gazeOrigin, rawGazeTarget, correctedGazeTarget, leftPupilDiam, rightPupilDiam, needsUpdateDynContour);
@@ -442,8 +437,8 @@ void AStimulus::Tick(float DeltaTime)
         m_corrTarget = uv;
         m_rawTarget = sceneToBillboard(rawGazeTarget);
         FVector camHitPoint;
-        FVector camLocation = m_amera->GetCameraLocation();
-        FRotator camRotation = m_amera->GetCameraRotation();
+        FVector camLocation = m_camera->GetCameraLocation();
+        FRotator camRotation = m_camera->GetCameraRotation();
         FVector gazeRay = camRotation.RotateVector(FVector::ForwardVector) * MAX_DISTANCE + camLocation;
         castRay(camLocation, gazeRay, camHitPoint);
         m_camTarget = sceneToBillboard(camHitPoint);
@@ -472,7 +467,7 @@ void AStimulus::Tick(float DeltaTime)
         string msg = to_string(t.ToUnixTimestamp() * 1000 + t.GetMillisecond()) + " " +
                      to_string(uv.X) + " " + to_string(uv.Y) + " " +
                      to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
-                     to_string(focusInfo.point.X) + " " + to_string(focusInfo.point.Y) + " " + to_string(focusInfo.point.Z) + " " +
+                     to_string(correctedGazeTarget.X) + " " + to_string(correctedGazeTarget.Y) + " " + to_string(correctedGazeTarget.Z) + " " +
                      to_string(leftPupilDiam) + " " + to_string(rightPupilDiam) + " " +
                      to_string(currentAOI);
         string msgToSend = msg + (selected ? " SELECT" : " LOOKAT");
@@ -630,7 +625,7 @@ void AStimulus::strokeCircle(UCanvas *cvs, const FVector2D &pos, float radius, f
 
 void AStimulus::fillCircle(UCanvas *cvs, const FVector2D &pos, float radius) const
 {
-    cvs->K2_DrawPolygon(nullptr, pos, radius, 16, FLinearColor(0, 0, 0, 1));
+    cvs->K2_DrawPolygon(nullptr, pos, FVector2D(radius), 16, FLinearColor(0, 0, 0, 1));
 }
 
 void AStimulus::drawContourOfAOI(UCanvas *cvs, const FLinearColor &color, float th, int aoi) const
@@ -717,5 +712,5 @@ void AStimulus::calibrate()
 
 void AStimulus::customCalibrate()
 {
-    m_needsCustomCalibration = true;
+    m_needsCustomCalib = true;
 }
