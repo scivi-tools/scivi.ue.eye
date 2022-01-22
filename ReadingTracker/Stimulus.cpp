@@ -264,6 +264,14 @@ bool AStimulus::castRay(const FVector &origin, const FVector &ray, FVector &hitP
     return result;
 }
 
+FVector2D AStimulus::posForIdx(int idx) const
+{
+    if ((idx / POINTS_PER_ROW) % 2)
+        idx += POINTS_PER_ROW - (idx % POINTS_PER_ROW);
+    return FVector2D((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW) + START_POSITION,
+                     (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN) + START_POSITION);
+}
+
 void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeTarget, const FVector2D &gazeLoc,
                                  FVector &correctedGazeTarget, bool &needsUpdateDynContour)
 {
@@ -370,8 +378,7 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
                 m_customCalibPhase = CalibPhase::Done;
             else
             {
-                FVector2D posTo((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW) + START_POSITION,
-                                (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN) + START_POSITION);
+                FVector2D posTo = posForIdx(idx);
                 ++m_customCalibSamples;
                 if (m_customCalibSamples == SAMPLES_TO_MOVE)
                 {
@@ -384,9 +391,7 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
                 }
                 else
                 {
-                    --idx;
-                    FVector2D posFrom((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW) + START_POSITION,
-                                      (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN) + START_POSITION);
+                    FVector2D posFrom = posForIdx(idx - 1);
                     m_customCalibTarget.location = FVector2D(map(m_customCalibSamples, 0, SAMPLES_TO_MOVE, posFrom.X, posTo.X),
                                                              map(m_customCalibSamples, 0, SAMPLES_TO_MOVE, posFrom.Y, posTo.Y));
                 }

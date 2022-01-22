@@ -153,6 +153,7 @@ private:
     bool findTriangle(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3) const;
     FQuat barycentric(const FVector2D &gazeLoc, const CalibPoint &cp1, const CalibPoint &cp2, const CalibPoint &cp3) const;
     bool castRay(const FVector &origin, const FVector &ray, FVector &hitPoint) const;
+    FVector2D posForIdx(int idx) const;
     void applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeTarget, const FVector2D &gazeLoc,
                           FVector &correctedGazeTarget, bool &needsUpdateDynContour);
     bool focus(FVector &gazeOrigin, FVector &rawGazeTarget, FVector &correctedGazeTarget,
