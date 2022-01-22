@@ -158,30 +158,56 @@ FVector2D AStimulus::sceneToBillboard(const FVector &pos) const
                      1.0f - ((pos.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f);
 }
 
-void AStimulus::findNearest(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3) const
+bool AStimulus::pointInTriangle(const FVector2D &p, const FVector2D &a, const FVector2D &b, const FVector2D &c) const
 {
-    cp1.gazeXY.Set(1.0e5, 1.0e5);
-    cp2.gazeXY.Set(1.0e5, 1.0e5);
-    cp3.gazeXY.Set(1.0e5, 1.0e5);
+    #define calcSign(p1, p2, p3) ((p1.X - p3.X) * (p2.Y - p3.Y) - (p2.X - p3.X) * (p1.Y - p3.Y))
+    float d1 = calcSign(p, a, b);
+    float d2 = calcSign(p, b, c);
+    float d3 = calcSign(p, c, a);
+    #undef calcSign
+
+    bool hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+    bool hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+    return !(hasNeg && hasPos);
+}
+
+bool AStimulus::findTriangle(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3) const
+{
+    CalibPoint *p1 = nullptr;
+    CalibPoint *p2 = nullptr;
+    CalibPoint *p3 = nullptr;
     for (int i = 0, n = m_customCalibPoints.Num(); i < n; ++i)
     {
         float d = m_customCalibPoints[i].pDist(gazeLoc);
-        if (d < cp1.pDist(gazeLoc))
+        if (!p1 || d < p1->pDist(gazeLoc))
         {
-            cp3 = cp2;
-            cp2 = cp1;
-            cp1 = m_customCalibPoints[i];
+            p2 = p1;
+            p1 = &m_customCalibPoints[i];
         }
-        else if (d < cp2.pDist(gazeLoc))
+        else if (!p2 || d < p2->pDist(gazeLoc))
         {
-            cp3 = cp2;
-            cp2 = m_customCalibPoints[i];
-        }
-        else if (d < cp3.pDist(gazeLoc))
-        {
-            cp3 = m_customCalibPoints[i];
+            p2 = &m_customCalibPoints[i];
         }
     }
+    for (int i = 0, n = m_customCalibPoints.Num(); i < n; ++i)
+    {
+        if (&m_customCalibPoints[i] != p1 &&
+            &m_customCalibPoints[i] != p2 &&
+            pointInTriangle(gazeLoc, *p1, *p2, m_customCalibPoints[i]) &&
+            (!p3 || m_customCalibPoints[i].pDist(gazeLoc) < p3->pDist(gazeLoc)))
+        {
+            p3 = &m_customCalibPoints[i];
+        }
+    }
+    if (p3)
+    {
+        cp1 = *p1;
+        cp2 = *p2;
+        cp3 = *p3;
+        return true;
+    }
+    return false;
 }
 
 FQuat AStimulus::barycentric(const FVector2D &gazeLoc, const CalibPoint &cp1, const CalibPoint &cp2, const CalibPoint &cp3) const
@@ -361,16 +387,22 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
         case CalibPhase::Done:
         {
             CalibPoint cp1, cp2, cp3;
-            findNearest(gazeLoc, cp1, cp2, cp3);
-            FQuat corr = barycentric(gazeLoc, cp1, cp2, cp3);
-            FVector reportedGazeOrigin, reportedGazeDirection;
-            if (USRanipalEye_FunctionLibrary::GetGazeRay(GazeIndex::COMBINE, reportedGazeOrigin, reportedGazeDirection))
+            if (findTriangle(gazeLoc, cp1, cp2, cp3))
             {
-                FVector camLocation = m_camera->GetCameraLocation();
-                FRotator camRotation = m_camera->GetCameraRotation();
-                FVector gazeRay = (corr.RotateVector(camRotation.RotateVector(reportedGazeDirection)) * MAX_DISTANCE) + camLocation;
-                if (!castRay(camLocation, gazeRay, correctedGazeTarget))
+                FQuat corr = barycentric(gazeLoc, cp1, cp2, cp3);
+                FVector reportedGazeOrigin, reportedGazeDirection;
+                if (USRanipalEye_FunctionLibrary::GetGazeRay(GazeIndex::COMBINE, reportedGazeOrigin, reportedGazeDirection))
+                {
+                    FVector camLocation = m_camera->GetCameraLocation();
+                    FRotator camRotation = m_camera->GetCameraRotation();
+                    FVector gazeRay = (corr.RotateVector(camRotation.RotateVector(reportedGazeDirection)) * MAX_DISTANCE) + camLocation;
+                    if (!castRay(camLocation, gazeRay, correctedGazeTarget))
+                        correctedGazeTarget = gazeTarget;
+                }
+                else
+                {
                     correctedGazeTarget = gazeTarget;
+                }
             }
             else
             {

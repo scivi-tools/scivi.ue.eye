@@ -148,7 +148,8 @@ private:
     }
     FVector billboardToScene(const FVector2D &pos) const;
     FVector2D sceneToBillboard(const FVector &pos) const;
-    void findNearest(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3) const;
+    bool pointInTriangle(const FVector2D &p, const FVector2D &a, const FVector2D &b, const FVector2D &c) const;
+    bool findTriangle(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3) const;
     FQuat barycentric(const FVector2D &gazeLoc, const CalibPoint &cp1, const CalibPoint &cp2, const CalibPoint &cp3) const;
     bool castRay(const FVector &origin, const FVector &ray, FVector &hitPoint) const;
     void applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeTarget, const FVector2D &gazeLoc,
