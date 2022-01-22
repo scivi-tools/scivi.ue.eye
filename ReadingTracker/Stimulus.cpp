@@ -332,17 +332,27 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
             realGaze.Normalize();
             if (FMath::RadiansToDegrees(acosf(FVector::DotProduct(reportedGaze, realGaze))) < OUTLIER_THRESHOLD)
             {
-                m_customCalibAccumReportedGaze += reportedGaze;
-                m_customCalibAccumReportedGaze.Normalize();
-                m_customCalibAccumRealGaze += realGaze;
-                m_customCalibAccumRealGaze.Normalize();
-                m_customCalibAccumLocation += gazeLoc;
+                if (m_customCalibSamples > SAMPLES_TO_REJECT)
+                {
+                    m_customCalibAccumReportedGaze += reportedGaze;
+                    m_customCalibAccumReportedGaze.Normalize();
+                    m_customCalibAccumRealGaze += realGaze;
+                    m_customCalibAccumRealGaze.Normalize();
+                    m_customCalibAccumLocation += gazeLoc;
+                }
                 ++m_customCalibSamples;
+            }
+            else
+            {
+                m_customCalibSamples = 0;
+                m_customCalibAccumReportedGaze = FVector(0.0f);
+                m_customCalibAccumRealGaze = FVector(0.0f);
+                m_customCalibAccumLocation = FVector2D(0.0f);
             }
             if (m_customCalibSamples == SAMPLES_TO_DECREASE)
             {
                 CalibPoint cp;
-                cp.gazeXY = m_customCalibAccumLocation / (float)m_customCalibSamples;
+                cp.gazeXY = m_customCalibAccumLocation / (float)(SAMPLES_TO_DECREASE - SAMPLES_TO_REJECT);
                 cp.qCorr = FQuat::FindBetween(m_customCalibAccumReportedGaze, m_customCalibAccumRealGaze);
                 m_customCalibPoints.Add(cp);
                 m_customCalibSamples = 0;

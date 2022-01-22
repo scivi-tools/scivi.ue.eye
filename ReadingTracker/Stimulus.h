@@ -79,6 +79,7 @@ private:
     static const constexpr int SAMPLES_TO_START_MOVE = 22; // 0.25s
     static const constexpr int SAMPLES_TO_DECREASE = 15;   // 165ms | Total ~2s
     static const constexpr int SAMPLES_TO_MOVE = 5;        // 55ms  | per 9-points row
+    static const constexpr int SAMPLES_TO_REJECT = 5;
     static const constexpr float START_POSITION = 0.05f;
     static const constexpr float END_POSITION = 0.95f;
     static const constexpr float CENTER_POSTION = 0.5f;
