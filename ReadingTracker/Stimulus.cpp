@@ -268,8 +268,8 @@ FVector2D AStimulus::posForIdx(int idx) const
 {
     if ((idx / POINTS_PER_ROW) % 2)
         idx = (idx / POINTS_PER_ROW) * POINTS_PER_ROW + POINTS_PER_ROW - (idx % POINTS_PER_ROW) - 1;
-    return FVector2D((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW) + START_POSITION,
-                     (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN) + START_POSITION);
+    return FVector2D((float)(idx % POINTS_PER_ROW) * (END_POSITION - START_POSITION) / (float)(POINTS_PER_ROW - 1) + START_POSITION,
+                     (float)(idx / POINTS_PER_ROW) * (END_POSITION - START_POSITION) / (float)(ROWS_IN_PATTERN - 1) + START_POSITION);
 }
 
 void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeTarget, const FVector2D &gazeLoc,
