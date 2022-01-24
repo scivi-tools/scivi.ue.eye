@@ -71,8 +71,8 @@ private:
         Done
     };
 
-    static const constexpr int TARGET_MAX_RADIUS = 10;
-    static const constexpr int TARGET_MIN_RADIUS = 3;
+    static const constexpr int TARGET_MAX_RADIUS = 15;
+    static const constexpr int TARGET_MIN_RADIUS = 7;
     static const constexpr int POINTS_PER_ROW = 9;
     static const constexpr int ROWS_IN_PATTERN = 9;
     static const constexpr int SAMPLES_TO_START = 180;     // 2s

@@ -642,7 +642,7 @@ void AStimulus::drawContour(UCanvas *cvs, int32 w, int32 h)
 #endif // EYE_DEBUG
 
     if (m_customCalibPhase != CalibPhase::None && m_customCalibPhase != CalibPhase::Done)
-        fillCircle(cvs, FVector2D(m_customCalibTarget.location.X * m_stimulusW, m_customCalibTarget.location.Y * m_stimulusH), 10.0f);
+        fillCircle(cvs, FVector2D(m_customCalibTarget.location.X * m_stimulusW, m_customCalibTarget.location.Y * m_stimulusH), m_customCalibTarget.radius);
 }
 
 bool AStimulus::pointInPolygon(const FVector2D &pt, const TArray<FVector2D> &poly) const
