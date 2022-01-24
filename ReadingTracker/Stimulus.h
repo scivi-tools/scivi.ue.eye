@@ -79,6 +79,7 @@ private:
     static const constexpr int SAMPLES_TO_START_MOVE = 22; // 0.25s
     static const constexpr int SAMPLES_TO_DECREASE = 15;   // 165ms | Total ~2s
     static const constexpr int SAMPLES_TO_MOVE = 5;        // 55ms  | per 9-points row
+    static const constexpr int SAMPLES_TO_REJECT = 5;
     static const constexpr float START_POSITION = 0.05f;
     static const constexpr float END_POSITION = 0.95f;
     static const constexpr float CENTER_POSTION = 0.5f;
@@ -148,9 +149,11 @@ private:
     }
     FVector billboardToScene(const FVector2D &pos) const;
     FVector2D sceneToBillboard(const FVector &pos) const;
-    void findNearest(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3) const;
+    bool pointInTriangle(const FVector2D &p, const FVector2D &a, const FVector2D &b, const FVector2D &c) const;
+    bool findTriangle(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3) const;
     FQuat barycentric(const FVector2D &gazeLoc, const CalibPoint &cp1, const CalibPoint &cp2, const CalibPoint &cp3) const;
     bool castRay(const FVector &origin, const FVector &ray, FVector &hitPoint) const;
+    FVector2D posForIdx(int idx) const;
     void applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeTarget, const FVector2D &gazeLoc,
                           FVector &correctedGazeTarget, bool &needsUpdateDynContour);
     bool focus(FVector &gazeOrigin, FVector &rawGazeTarget, FVector &correctedGazeTarget,

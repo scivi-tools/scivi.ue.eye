@@ -158,30 +158,56 @@ FVector2D AStimulus::sceneToBillboard(const FVector &pos) const
                      1.0f - ((pos.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f);
 }
 
-void AStimulus::findNearest(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3) const
+bool AStimulus::pointInTriangle(const FVector2D &p, const FVector2D &a, const FVector2D &b, const FVector2D &c) const
 {
-    cp1.gazeXY.Set(1.0e5, 1.0e5);
-    cp2.gazeXY.Set(1.0e5, 1.0e5);
-    cp3.gazeXY.Set(1.0e5, 1.0e5);
+    #define calcSign(p1, p2, p3) ((p1.X - p3.X) * (p2.Y - p3.Y) - (p2.X - p3.X) * (p1.Y - p3.Y))
+    float d1 = calcSign(p, a, b);
+    float d2 = calcSign(p, b, c);
+    float d3 = calcSign(p, c, a);
+    #undef calcSign
+
+    bool hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+    bool hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+    return !(hasNeg && hasPos);
+}
+
+bool AStimulus::findTriangle(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3) const
+{
+    CalibPoint *p1 = nullptr;
+    CalibPoint *p2 = nullptr;
+    CalibPoint *p3 = nullptr;
     for (int i = 0, n = m_customCalibPoints.Num(); i < n; ++i)
     {
         float d = m_customCalibPoints[i].pDist(gazeLoc);
-        if (d < cp1.pDist(gazeLoc))
+        if (!p1 || d < p1->pDist(gazeLoc))
         {
-            cp3 = cp2;
-            cp2 = cp1;
-            cp1 = m_customCalibPoints[i];
+            p2 = p1;
+            p1 = &m_customCalibPoints[i];
         }
-        else if (d < cp2.pDist(gazeLoc))
+        else if (!p2 || d < p2->pDist(gazeLoc))
         {
-            cp3 = cp2;
-            cp2 = m_customCalibPoints[i];
-        }
-        else if (d < cp3.pDist(gazeLoc))
-        {
-            cp3 = m_customCalibPoints[i];
+            p2 = &m_customCalibPoints[i];
         }
     }
+    for (int i = 0, n = m_customCalibPoints.Num(); i < n; ++i)
+    {
+        if (&m_customCalibPoints[i] != p1 &&
+            &m_customCalibPoints[i] != p2 &&
+            pointInTriangle(gazeLoc, *p1, *p2, m_customCalibPoints[i]) &&
+            (!p3 || m_customCalibPoints[i].pDist(gazeLoc) < p3->pDist(gazeLoc)))
+        {
+            p3 = &m_customCalibPoints[i];
+        }
+    }
+    if (p3)
+    {
+        cp1 = *p1;
+        cp2 = *p2;
+        cp3 = *p3;
+        return true;
+    }
+    return false;
 }
 
 FQuat AStimulus::barycentric(const FVector2D &gazeLoc, const CalibPoint &cp1, const CalibPoint &cp2, const CalibPoint &cp3) const
@@ -236,6 +262,14 @@ bool AStimulus::castRay(const FVector &origin, const FVector &ray, FVector &hitP
         hitPoint = hitResult.Location;
 
     return result;
+}
+
+FVector2D AStimulus::posForIdx(int idx) const
+{
+    if ((idx / POINTS_PER_ROW) % 2)
+        idx += POINTS_PER_ROW - (idx % POINTS_PER_ROW);
+    return FVector2D((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW) + START_POSITION,
+                     (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN) + START_POSITION);
 }
 
 void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeTarget, const FVector2D &gazeLoc,
@@ -306,17 +340,27 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
             realGaze.Normalize();
             if (FMath::RadiansToDegrees(acosf(FVector::DotProduct(reportedGaze, realGaze))) < OUTLIER_THRESHOLD)
             {
-                m_customCalibAccumReportedGaze += reportedGaze;
-                m_customCalibAccumReportedGaze.Normalize();
-                m_customCalibAccumRealGaze += realGaze;
-                m_customCalibAccumRealGaze.Normalize();
-                m_customCalibAccumLocation += gazeLoc;
+                if (m_customCalibSamples > SAMPLES_TO_REJECT)
+                {
+                    m_customCalibAccumReportedGaze += reportedGaze;
+                    m_customCalibAccumReportedGaze.Normalize();
+                    m_customCalibAccumRealGaze += realGaze;
+                    m_customCalibAccumRealGaze.Normalize();
+                    m_customCalibAccumLocation += gazeLoc;
+                }
                 ++m_customCalibSamples;
+            }
+            else
+            {
+                m_customCalibSamples = 0;
+                m_customCalibAccumReportedGaze = FVector(0.0f);
+                m_customCalibAccumRealGaze = FVector(0.0f);
+                m_customCalibAccumLocation = FVector2D(0.0f);
             }
             if (m_customCalibSamples == SAMPLES_TO_DECREASE)
             {
                 CalibPoint cp;
-                cp.gazeXY = m_customCalibAccumLocation / (float)m_customCalibSamples;
+                cp.gazeXY = m_customCalibAccumLocation / (float)(SAMPLES_TO_DECREASE - SAMPLES_TO_REJECT);
                 cp.qCorr = FQuat::FindBetween(m_customCalibAccumReportedGaze, m_customCalibAccumRealGaze);
                 m_customCalibPoints.Add(cp);
                 m_customCalibSamples = 0;
@@ -334,8 +378,7 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
                 m_customCalibPhase = CalibPhase::Done;
             else
             {
-                FVector2D posTo((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW) + START_POSITION,
-                                (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN) + START_POSITION);
+                FVector2D posTo = posForIdx(idx);
                 ++m_customCalibSamples;
                 if (m_customCalibSamples == SAMPLES_TO_MOVE)
                 {
@@ -348,9 +391,7 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
                 }
                 else
                 {
-                    --idx;
-                    FVector2D posFrom((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW) + START_POSITION,
-                                      (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN) + START_POSITION);
+                    FVector2D posFrom = posForIdx(idx - 1);
                     m_customCalibTarget.location = FVector2D(map(m_customCalibSamples, 0, SAMPLES_TO_MOVE, posFrom.X, posTo.X),
                                                              map(m_customCalibSamples, 0, SAMPLES_TO_MOVE, posFrom.Y, posTo.Y));
                 }
@@ -361,16 +402,22 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
         case CalibPhase::Done:
         {
             CalibPoint cp1, cp2, cp3;
-            findNearest(gazeLoc, cp1, cp2, cp3);
-            FQuat corr = barycentric(gazeLoc, cp1, cp2, cp3);
-            FVector reportedGazeOrigin, reportedGazeDirection;
-            if (USRanipalEye_FunctionLibrary::GetGazeRay(GazeIndex::COMBINE, reportedGazeOrigin, reportedGazeDirection))
+            if (findTriangle(gazeLoc, cp1, cp2, cp3))
             {
-                FVector camLocation = m_camera->GetCameraLocation();
-                FRotator camRotation = m_camera->GetCameraRotation();
-                FVector gazeRay = (corr.RotateVector(camRotation.RotateVector(reportedGazeDirection)) * MAX_DISTANCE) + camLocation;
-                if (!castRay(camLocation, gazeRay, correctedGazeTarget))
+                FQuat corr = barycentric(gazeLoc, cp1, cp2, cp3);
+                FVector reportedGazeOrigin, reportedGazeDirection;
+                if (USRanipalEye_FunctionLibrary::GetGazeRay(GazeIndex::COMBINE, reportedGazeOrigin, reportedGazeDirection))
+                {
+                    FVector camLocation = m_camera->GetCameraLocation();
+                    FRotator camRotation = m_camera->GetCameraRotation();
+                    FVector gazeRay = (corr.RotateVector(camRotation.RotateVector(reportedGazeDirection)) * MAX_DISTANCE) + camLocation;
+                    if (!castRay(camLocation, gazeRay, correctedGazeTarget))
+                        correctedGazeTarget = gazeTarget;
+                }
+                else
+                {
                     correctedGazeTarget = gazeTarget;
+                }
             }
             else
             {
