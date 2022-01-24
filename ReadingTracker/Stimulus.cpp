@@ -174,9 +174,9 @@ bool AStimulus::pointInTriangle(const FVector2D &p, const FVector2D &a, const FV
 
 bool AStimulus::findTriangle(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3) const
 {
-    CalibPoint *p1 = nullptr;
-    CalibPoint *p2 = nullptr;
-    CalibPoint *p3 = nullptr;
+    const CalibPoint *p1 = nullptr;
+    const CalibPoint *p2 = nullptr;
+    const CalibPoint *p3 = nullptr;
     for (int i = 0, n = m_customCalibPoints.Num(); i < n; ++i)
     {
         float d = m_customCalibPoints[i].pDist(gazeLoc);
@@ -194,7 +194,7 @@ bool AStimulus::findTriangle(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoi
     {
         if (&m_customCalibPoints[i] != p1 &&
             &m_customCalibPoints[i] != p2 &&
-            pointInTriangle(gazeLoc, *p1, *p2, m_customCalibPoints[i]) &&
+            pointInTriangle(gazeLoc, p1->gazeXY, p2->gazeXY, m_customCalibPoints[i].gazeXY) &&
             (!p3 || m_customCalibPoints[i].pDist(gazeLoc) < p3->pDist(gazeLoc)))
         {
             p3 = &m_customCalibPoints[i];
@@ -267,7 +267,7 @@ bool AStimulus::castRay(const FVector &origin, const FVector &ray, FVector &hitP
 FVector2D AStimulus::posForIdx(int idx) const
 {
     if ((idx / POINTS_PER_ROW) % 2)
-        idx += POINTS_PER_ROW - (idx % POINTS_PER_ROW);
+        idx = (idx / POINTS_PER_ROW) * POINTS_PER_ROW + POINTS_PER_ROW - (idx % POINTS_PER_ROW) - 1;
     return FVector2D((idx % POINTS_PER_ROW) * END_POSITION / (POINTS_PER_ROW) + START_POSITION,
                      (idx / POINTS_PER_ROW) * END_POSITION / (ROWS_IN_PATTERN) + START_POSITION);
 }
