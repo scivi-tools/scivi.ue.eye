@@ -50,9 +50,8 @@ private:
     };
     struct CalibPoint
     {
-        FVector2D gazeXY;
+        FVector gaze;
         FQuat qCorr;
-        float pDist(const FVector2D &p) const { return FVector2D::DistSquared(gazeXY, p); };
     };
     struct CalibTarget
     {
@@ -86,6 +85,7 @@ private:
     static const constexpr float OUTLIER_THRESHOLD = 3.0f;
     static const constexpr float MAX_DISTANCE = 1000.0f;
     static const constexpr float HIT_RADIUS = 1.0f;
+    static const constexpr float EPSILON = 1.0e-5f;
 
     WSServer m_server;
     thread m_serverThread;
@@ -124,7 +124,7 @@ private:
     int m_customCalibSamples;
     FVector m_customCalibAccumReportedGaze;
     FVector m_customCalibAccumRealGaze;
-    FVector2D m_customCalibAccumLocation;
+    FVector m_customCalibAccumInternalGaze;
 
     APlayerCameraManager *m_camera;
 
@@ -146,15 +146,26 @@ private:
     float map(float v, float fromMin, float fromMax, float toMin, float toMax) const
     {
     	return toMin + (v - fromMin) / (fromMax - fromMin) * (toMax - toMin);
-    }
+    };
     FVector billboardToScene(const FVector2D &pos) const;
     FVector2D sceneToBillboard(const FVector &pos) const;
-    bool pointInTriangle(const FVector2D &p, const FVector2D &a, const FVector2D &b, const FVector2D &c) const;
-    bool findTriangle(const FVector2D &gazeLoc, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3) const;
-    FQuat barycentric(const FVector2D &gazeLoc, const CalibPoint &cp1, const CalibPoint &cp2, const CalibPoint &cp3) const;
+    float theta(const FVector &gaze) const
+    {
+        return fabs(gaze.Y) < EPSILON && fabs(gaze.Z) < EPSILON ? NAN : atan2(gaze.Y, gaze.Z) + PI;
+    };
+    float radius2(const FVector &gaze) const
+    {
+        return gaze.Y * gaze.Y + gaze.Z * gaze.Z;
+    };
+    int signum(float a, float b) const
+    {
+        return IsNaN(a) || IsNaN(b) || fabs(a - b) < EPSILON ? 0 : a - b > 0.0f ? 1 : -1;
+    };
+    bool positiveOctant(const FVector gaze, const CalibPoint p1, const CalibPoint &p2, const CalibPoint &p3, float &w1, float &w2, float &w3) const;
+    bool findBasis(const FVector &gaze, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3, float &w1, float &w2, float &w3) const;
     bool castRay(const FVector &origin, const FVector &ray, FVector &hitPoint) const;
     FVector2D posForIdx(int idx) const;
-    void applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeTarget, const FVector2D &gazeLoc,
+    void applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeTarget, const FVector &gaze,
                           FVector &correctedGazeTarget, bool &needsUpdateDynContour);
     bool focus(FVector &gazeOrigin, FVector &rawGazeTarget, FVector &correctedGazeTarget,
                float &leftPupilDiam, float &rightPupilDiam, bool &needsUpdateDynContour);
