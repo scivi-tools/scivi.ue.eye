@@ -182,6 +182,7 @@ public:
     UFUNCTION() void drawContour(UCanvas *cvs, int32 w, int32 h);
 
     UFUNCTION(BlueprintCallable) void trigger(bool isPressed);
+    UFUNCTION(BlueprintCallable) void customCalib();
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite) UStaticMeshComponent *mesh;
     UPROPERTY(EditAnywhere) SupportedEyeVersion EyeVersion;

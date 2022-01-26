@@ -785,3 +785,8 @@ void AStimulus::customCalibrate()
 {
     m_needsCustomCalib = true;
 }
+
+void AStimulus::customCalib()
+{
+    customCalibrate();
+}
