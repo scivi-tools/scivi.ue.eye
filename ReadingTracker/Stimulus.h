@@ -26,6 +26,7 @@ using WSServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 #include "Misc/Base64.h"
 #include "Engine/CanvasRenderTarget2D.h"
 #include "Engine/Canvas.h"
+#include "GenericPlatform/GenericPlatformMath.h"
 #include "Stimulus.generated.h"
 
 
@@ -159,7 +160,7 @@ private:
     };
     int signum(float a, float b) const
     {
-        return IsNaN(a) || IsNaN(b) || fabs(a - b) < EPSILON ? 0 : a - b > 0.0f ? 1 : -1;
+        return FGenericPlatformMath::IsNaN(a) || FGenericPlatformMath::IsNaN(b) || fabs(a - b) < EPSILON ? 0 : a - b > 0.0f ? 1 : -1;
     };
     bool positiveOctant(const FVector gaze, const CalibPoint p1, const CalibPoint &p2, const CalibPoint &p3, float &w1, float &w2, float &w3) const;
     bool findBasis(const FVector &gaze, CalibPoint &cp1, CalibPoint &cp2, CalibPoint &cp3, float &w1, float &w2, float &w3) const;

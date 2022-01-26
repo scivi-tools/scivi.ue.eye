@@ -181,7 +181,7 @@ bool AStimulus::findBasis(const FVector &gaze, CalibPoint &cp1, CalibPoint &cp2,
 {
     float thetaGaze = theta(gaze);
     // Theta is undefined for the center of vision area only.
-    if (IsNaN(thetaGaze))
+    if (FGenericPlatformMath::IsNaN(thetaGaze))
     {
         cp1 = cp2 = cp3 = m_customCalibPoints[POINTS_PER_ROW * POINTS_PER_ROW / 2];
         w1 = 1.0f;
@@ -197,7 +197,7 @@ bool AStimulus::findBasis(const FVector &gaze, CalibPoint &cp1, CalibPoint &cp2,
     float maxDot = -2.0f;
     for (int i = 0, n = m_customCalibPoints.Num(); i < n; ++i)
     {
-        float d = FVector::DotProduct(gaze, m_customCalibPoints[i]);
+        float d = FVector::DotProduct(gaze, m_customCalibPoints[i].gaze);
         if (d > maxDot)
         {
             p1 = &m_customCalibPoints[i];
@@ -212,21 +212,21 @@ bool AStimulus::findBasis(const FVector &gaze, CalibPoint &cp1, CalibPoint &cp2,
     //     p2 != p1 &&
     //     signum(theta(p1), theta(gaze)) != signum(theta(p2), theta(gaze)) &&
     //     signum(radius2(p1), radius2(gaze)) != signum(radius2(p2), radius2(gaze))
-    float minThetaDeta = 1.0e5f;
+    float minThetaDelta = 1.0e5f;
     float radius2Gaze = radius2(gaze);
-    int signumTheta = signum(theta(*p1), thetaGaze);
-    int signumRadius2 = signum(radius2(*p1), radius2Gaze);
+    int signumTheta = signum(theta(p1->gaze), thetaGaze);
+    int signumRadius2 = signum(radius2(p1->gaze), radius2Gaze);
     for (int i = 0, n = m_customCalibPoints.Num(); i < n; ++i)
     {
         if (&m_customCalibPoints[i] != p1)
         {
-            float thetaP = theta(m_customCalibPoints[i]);
-            if (!IsNaN(thetaP))
+            float thetaP = theta(m_customCalibPoints[i].gaze);
+            if (!FGenericPlatformMath::IsNaN(thetaP))
             {
                 float thetaDelta = fabs(thetaP - thetaGaze);
                 if (thetaDelta < minThetaDelta &&
                     signumTheta != signum(thetaP, thetaGaze) &&
-                    signumRadius2 != signum(radius2(m_customCalibPoints[i]), radius2Gaze))
+                    signumRadius2 != signum(radius2(m_customCalibPoints[i].gaze), radius2Gaze))
                 {
                     p2 = &m_customCalibPoints[i];
                     minThetaDelta = thetaDelta;
@@ -251,8 +251,8 @@ bool AStimulus::findBasis(const FVector &gaze, CalibPoint &cp1, CalibPoint &cp2,
         {
             if (&m_customCalibPoints[i] != p1 && &m_customCalibPoints[i] != p2)
             {
-                float thetaP = theta(m_customCalibPoints[i]);
-                if (!IsNaN(thetaP))
+                float thetaP = theta(m_customCalibPoints[i].gaze);
+                if (!FGenericPlatformMath::IsNaN(thetaP))
                 {
                     float thetaDelta = fabs(thetaP - thetaGaze);
                     if (thetaDelta < minThetaDelta && positiveOctant(gaze, *p1, *p2, m_customCalibPoints[i], w1, w2, w3))
