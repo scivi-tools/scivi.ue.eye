@@ -126,6 +126,8 @@ private:
     FVector m_customCalibAccumReportedGaze;
     FVector m_customCalibAccumRealGaze;
     FVector m_customCalibAccumInternalGaze;
+    FTransform m_staticTransform;
+    FVector m_staticExtent;
 
     APlayerCameraManager *m_camera;
 

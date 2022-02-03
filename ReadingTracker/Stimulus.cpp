@@ -45,6 +45,9 @@ void AStimulus::BeginPlay()
 
     m_camera = UGameplayStatics::GetPlayerController(GetWorld(), 0)->PlayerCameraManager;
 
+    m_staticTransform = GetTransform();
+    m_staticExtent = mesh->CalcLocalBounds().BoxExtent;
+
     SRanipalEye_Framework::Instance()->StartFramework(EyeVersion);
     
     initWS();
@@ -143,19 +146,15 @@ void AStimulus::wsRun()
 
 FVector AStimulus::billboardToScene(const FVector2D &pos) const
 {
-    FVector actorOrigin, actorExtent;
-    GetActorBounds(true, actorOrigin, actorExtent, false);
-    return FVector((2.0f * (1.0f - pos.X) - 1.0f) * actorExtent.X + actorOrigin.X,
-                   actorOrigin.Y,
-                   (2.0f * (1.0f - pos.Y) - 1.0f) * actorExtent.Z + actorOrigin.Z);
+    return GetTransform().TransformPosition(FVector(m_staticExtent.X * (2.0f * pos.X - 1.0f),
+                                                    m_staticExtent.Y * (2.0f * pos.Y - 1.0f),
+                                                    0.0f));
 }
 
 FVector2D AStimulus::sceneToBillboard(const FVector &pos) const
 {
-    FVector actorOrigin, actorExtent;
-    GetActorBounds(true, actorOrigin, actorExtent, false);
-    return FVector2D(1.0f - ((pos.X - actorOrigin.X) / actorExtent.X + 1.0f) / 2.0f,
-                     1.0f - ((pos.Z - actorOrigin.Z) / actorExtent.Z + 1.0f) / 2.0f);
+    FVector local = GetTransform().InverseTransformPosition(pos);
+    return FVector2D((local.X / m_staticExtent.X + 1.0f) / 2.0f, (local.Y / m_staticExtent.Y + 1.0f) / 2.0f);
 }
 
 bool AStimulus::positiveOctant(const FVector gaze, const CalibPoint p1, const CalibPoint &p2, const CalibPoint &p3,
@@ -547,7 +546,7 @@ void AStimulus::Tick(float DeltaTime)
     if (m_needsUpdate)
     {
         lock_guard<mutex> lock(m_mutex);
-        mesh->SetRelativeScale3D(FVector(m_aspect * 1.218 * m_scaleX, 1.218 * m_scaleY, 1.0));
+        SetActorScale3D(FVector(m_aspect * 1.218 * m_scaleX, 1.218 * m_scaleY, 1.0));
         m_dynContour = UCanvasRenderTarget2D::CreateCanvasRenderTarget2D(GetWorld(), UCanvasRenderTarget2D::StaticClass(), m_dynTexW, m_dynTexH);
         m_dynContour->ClearColor = FLinearColor(0, 0, 0, 0);
         m_dynContour->OnCanvasRenderTargetUpdate.AddDynamic(this, &AStimulus::drawContour);
