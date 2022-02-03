@@ -193,76 +193,60 @@ bool AStimulus::findBasis(const FVector &gaze, CalibPoint &cp1, CalibPoint &cp2,
     const CalibPoint *p2 = nullptr;
     const CalibPoint *p3 = nullptr;
 
+    p1 = &m_customCalibPoints[POINTS_PER_ROW * POINTS_PER_ROW / 2];
+
     // p1: dot(cp1.gaze, gaze) --> max
     float maxDot = -2.0f;
     for (int i = 0, n = m_customCalibPoints.Num(); i < n; ++i)
     {
-        float d = FVector::DotProduct(gaze, m_customCalibPoints[i].gaze);
-        if (d > maxDot)
+        if (p1 != &m_customCalibPoints[i])
         {
-            p1 = &m_customCalibPoints[i];
-            maxDot = d;
+            float d = FVector::DotProduct(gaze, m_customCalibPoints[i].gaze);
+            if (d > maxDot)
+            {
+                p2 = &m_customCalibPoints[i];
+                maxDot = d;
+            }
         }
     }
 
-    if (!p1)
-        return false;
-
-    // p2: |theta(p2) - theta(gaze)| --> min &&
-    //     p2 != p1 &&
-    //     signum(theta(p1), theta(gaze)) != signum(theta(p2), theta(gaze)) &&
-    //     signum(radius2(p1), radius2(gaze)) != signum(radius2(p2), radius2(gaze))
-    float minThetaDelta = 1.0e5f;
-    float radius2Gaze = radius2(gaze);
-    int signumTheta = signum(theta(p1->gaze), thetaGaze);
-    int signumRadius2 = signum(radius2(p1->gaze), radius2Gaze);
+    maxDot = -2.0f;
     for (int i = 0, n = m_customCalibPoints.Num(); i < n; ++i)
     {
-        if (&m_customCalibPoints[i] != p1)
+        if (p1 != &m_customCalibPoints[i] && p2 != &m_customCalibPoints[i])
         {
-            float thetaP = theta(m_customCalibPoints[i].gaze);
-            if (!FGenericPlatformMath::IsNaN(thetaP))
+            float d = FVector::DotProduct(gaze, m_customCalibPoints[i].gaze);
+            if (d > maxDot)
             {
-                float thetaDelta = fabs(thetaP - thetaGaze);
-                if (thetaDelta < minThetaDelta &&
-                    signumTheta != signum(thetaP, thetaGaze) &&
-                    signumRadius2 != signum(radius2(m_customCalibPoints[i].gaze), radius2Gaze))
-                {
-                    p2 = &m_customCalibPoints[i];
-                    minThetaDelta = thetaDelta;
-                }
+                p3 = &m_customCalibPoints[i];
+                maxDot = d;
             }
         }
     }
 
-    if (!p2)
+    if (!p1 || !p2 || !p3)
         return false;
 
-    // p3: p3 != p1 && p3 != p2 &&
-    //     (
-    //      (p3 = center && positiveOctant(gaze, p1, p2, p3)) ||
-    //      (|theta(p3) - theta(gaze)| --> min && positiveOctant(gaze, p1, p2, p3))
-    //     )
-    p3 = &m_customCalibPoints[POINTS_PER_ROW * POINTS_PER_ROW / 2];
-    if (p3 == p1 || p3 == p2 || !positiveOctant(gaze, *p1, *p2, *p3, w1, w2, w3))
+    if (!positiveOctant(gaze, *p1, *p2, *p3, w1, w2, w3))
     {
-        minThetaDelta = 1.0e5f;
+        maxDot = -2.0f;
         for (int i = 0, n = m_customCalibPoints.Num(); i < n; ++i)
         {
-            if (&m_customCalibPoints[i] != p1 && &m_customCalibPoints[i] != p2)
+            //if (p1 != &m_customCalibPoints[i])
             {
-                float thetaP = theta(m_customCalibPoints[i].gaze);
-                if (!FGenericPlatformMath::IsNaN(thetaP))
+                float d = FVector::DotProduct(gaze, m_customCalibPoints[i].gaze);
+                if (d > maxDot)
                 {
-                    float thetaDelta = fabs(thetaP - thetaGaze);
-                    if (thetaDelta < minThetaDelta && positiveOctant(gaze, *p1, *p2, m_customCalibPoints[i], w1, w2, w3))
-                    {
-                        p3 = &m_customCalibPoints[i];
-                        minThetaDelta = thetaDelta;
-                    }
+                    p1 = &m_customCalibPoints[i];
+                    maxDot = d;
                 }
             }
         }
+        cp1 = cp2 = cp3 = *p1;
+        w1 = 1.0f;
+        w2 = w3 = 0.0f;
+        return true;
+        //return false;
     }
 
     cp1 = *p1;
@@ -301,8 +285,8 @@ bool AStimulus::castRay(const FVector &origin, const FVector &ray, FVector &hitP
 
 FVector2D AStimulus::posForIdx(int idx) const
 {
-    if ((idx / POINTS_PER_ROW) % 2)
-        idx = (idx / POINTS_PER_ROW) * POINTS_PER_ROW + POINTS_PER_ROW - (idx % POINTS_PER_ROW) - 1;
+    /*if ((idx / POINTS_PER_ROW) % 2)
+        idx = (idx / POINTS_PER_ROW) * POINTS_PER_ROW + POINTS_PER_ROW - (idx % POINTS_PER_ROW) - 1;*/
     return FVector2D((float)(idx % POINTS_PER_ROW) * (END_POSITION - START_POSITION) / (float)(POINTS_PER_ROW - 1) + START_POSITION,
                      (float)(idx / POINTS_PER_ROW) * (END_POSITION - START_POSITION) / (float)(ROWS_IN_PATTERN - 1) + START_POSITION);
 }

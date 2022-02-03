@@ -73,13 +73,13 @@ private:
 
     static const constexpr int TARGET_MAX_RADIUS = 15;
     static const constexpr int TARGET_MIN_RADIUS = 7;
-    static const constexpr int POINTS_PER_ROW = 5;
-    static const constexpr int ROWS_IN_PATTERN = 5;
+    static const constexpr int POINTS_PER_ROW = 3;
+    static const constexpr int ROWS_IN_PATTERN = 3;
     static const constexpr int SAMPLES_TO_START = 180;     // 2s
     static const constexpr int SAMPLES_TO_START_MOVE = 22; // 0.25s
     static const constexpr int SAMPLES_TO_DECREASE = 90;   // 1s
     static const constexpr int SAMPLES_TO_MOVE = 10;       // 110ms
-    static const constexpr int SAMPLES_TO_REJECT = 25;
+    static const constexpr int SAMPLES_TO_REJECT = 45;
     static const constexpr float START_POSITION = 0.05f;
     static const constexpr float END_POSITION = 0.95f;
     static const constexpr float CENTER_POSTION = 0.5f;
