@@ -45,9 +45,6 @@ void AStimulus::BeginPlay()
 
     m_camera = UGameplayStatics::GetPlayerController(GetWorld(), 0)->PlayerCameraManager;
 
-    m_staticTransform = GetTransform();
-    m_staticExtent = mesh->CalcLocalBounds().BoxExtent;
-
     SRanipalEye_Framework::Instance()->StartFramework(EyeVersion);
     
     initWS();
@@ -301,6 +298,15 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
         m_needsCustomCalib = false;
     }
 
+    if (m_customCalibPhase != CalibPhase::None && m_customCalibPhase != CalibPhase::Done)
+    {
+        const float CALIB_DISTANCE = 450.0f;
+        FVector camLocation = m_camera->GetCameraLocation();
+        FRotator camRotation = m_camera->GetCameraRotation();
+        SetActorLocation(camRotation.RotateVector(FVector::ForwardVector) * CALIB_DISTANCE + camLocation);
+        SetActorRotation(camRotation.Quaternion() * FQuat(FVector(0.0f, 0.0f, -1.0f), PI / 2.0f) * m_staticTransform.GetRotation());
+    }
+
     switch (m_customCalibPhase)
     {
         case CalibPhase::None:
@@ -394,7 +400,10 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
             needsUpdateDynContour = true;
             int idx = m_customCalibPoints.Num();
             if (idx == POINTS_PER_ROW * ROWS_IN_PATTERN)
+            {
                 m_customCalibPhase = CalibPhase::Done;
+                SetActorTransform(m_staticTransform);
+            }
             else
             {
                 FVector2D posTo = posForIdx(idx);
@@ -557,6 +566,8 @@ void AStimulus::Tick(float DeltaTime)
         m_activeAOI = -1;
         m_selectedAOIs.Empty();
         m_dynContour->UpdateResource();
+        m_staticTransform = GetTransform();
+        m_staticExtent = mesh->CalcLocalBounds().BoxExtent;
         m_needsUpdate = false;
         m_imgUpdated = true;
     }
