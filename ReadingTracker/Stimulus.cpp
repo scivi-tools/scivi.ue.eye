@@ -288,7 +288,7 @@ FVector2D AStimulus::posForIdx(int idx) const
 }
 
 void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeTarget, const FVector &gaze,
-                                 FVector &correctedGazeTarget, bool &needsUpdateDynContour)
+                                 FVector &correctedGazeTarget, bool &needsUpdateDynContour, float &cf)
 {
     if (m_needsCustomCalib)
     {
@@ -306,6 +306,8 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
         SetActorLocation(camRotation.RotateVector(FVector::ForwardVector) * CALIB_DISTANCE + camLocation);
         SetActorRotation(camRotation.Quaternion() * FQuat(FVector(0.0f, 0.0f, -1.0f), PI / 2.0f) * m_staticTransform.GetRotation());
     }
+
+    cf = -1.0f;
 
     switch (m_customCalibPhase)
     {
@@ -434,6 +436,8 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
             if (findBasis(gaze, cp1, cp2, cp3, w1, w2, w3))
             {
                 FQuat corr = cp1.qCorr * w1 + cp2.qCorr * w2 + cp3.qCorr * w3;
+                corr.Normalize();
+                cf = corr.W;
                 FVector reportedGazeOrigin, reportedGazeDirection;
                 if (USRanipalEye_FunctionLibrary::GetGazeRay(GazeIndex::COMBINE, reportedGazeOrigin, reportedGazeDirection))
                 {
@@ -459,7 +463,7 @@ void AStimulus::applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeT
 }
 
 bool AStimulus::focus(FVector &gazeOrigin, FVector &rawGazeTarget, FVector &correctedGazeTarget,
-                      float &leftPupilDiam, float &rightPupilDiam, bool &needsUpdateDynContour)
+                      float &leftPupilDiam, float &rightPupilDiam, bool &needsUpdateDynContour, float &cf)
 {
     FFocusInfo focusInfo;
     FVector gazeTarget;
@@ -475,7 +479,7 @@ bool AStimulus::focus(FVector &gazeOrigin, FVector &rawGazeTarget, FVector &corr
 
         FVector gaze = (vd.right.gaze_direction_normalized + vd.left.gaze_direction_normalized) / 2.0f; // Needs conversion to UE coordinates: X,Y,Z -> Z,-X,Y
         gaze.Normalize();
-        applyCustomCalib(gazeOrigin, rawGazeTarget, FVector(gaze.Z, gaze.X * -1.0f, gaze.Y), correctedGazeTarget, needsUpdateDynContour);
+        applyCustomCalib(gazeOrigin, rawGazeTarget, FVector(gaze.Z, gaze.X * -1.0f, gaze.Y), correctedGazeTarget, needsUpdateDynContour, cf);
 
         return true;
     }
@@ -488,8 +492,9 @@ void AStimulus::Tick(float DeltaTime)
 
     FVector gazeOrigin, rawGazeTarget, correctedGazeTarget;
     float leftPupilDiam, rightPupilDiam;
+    float cf;
     bool needsUpdateDynContour;
-    bool hit = focus(gazeOrigin, rawGazeTarget, correctedGazeTarget, leftPupilDiam, rightPupilDiam, needsUpdateDynContour);
+    bool hit = focus(gazeOrigin, rawGazeTarget, correctedGazeTarget, leftPupilDiam, rightPupilDiam, needsUpdateDynContour, cf);
     if (hit)
     {
         FVector2D uv = sceneToBillboard(correctedGazeTarget);
@@ -509,7 +514,7 @@ void AStimulus::Tick(float DeltaTime)
         int currentAOI = -1;
         needsUpdateDynContour = true;
 #else
-        int currentAOI = findActiveAOI(FVector2D(u * m_stimulusW, v * m_stimulusH));
+        int currentAOI = findActiveAOI(FVector2D(uv.X * m_stimulusW, uv.Y * m_stimulusH));
         int newAOI = m_inSelectionMode ? currentAOI : -1;
         if (m_activeAOI != newAOI && m_dynContour)
         {

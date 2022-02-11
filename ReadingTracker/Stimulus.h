@@ -169,9 +169,9 @@ private:
     bool castRay(const FVector &origin, const FVector &ray, FVector &hitPoint) const;
     FVector2D posForIdx(int idx) const;
     void applyCustomCalib(const FVector &gazeOrigin, const FVector &gazeTarget, const FVector &gaze,
-                          FVector &correctedGazeTarget, bool &needsUpdateDynContour);
+                          FVector &correctedGazeTarget, bool &needsUpdateDynContour, float &cf);
     bool focus(FVector &gazeOrigin, FVector &rawGazeTarget, FVector &correctedGazeTarget,
-               float &leftPupilDiam, float &rightPupilDiam, bool &needsUpdateDynContour);
+               float &leftPupilDiam, float &rightPupilDiam, bool &needsUpdateDynContour, float &cf);
 
 protected:
     virtual void BeginPlay() override;
