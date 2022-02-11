@@ -531,12 +531,50 @@ void AStimulus::Tick(float DeltaTime)
         if (m_dynContour && needsUpdateDynContour)
             m_dynContour->UpdateResource();
 
+#ifdef COLLECCT_ANGULAR_ERROR
+        if (m_rReleased)
+        {
+#ifdef MEASURE_ANGULAR_SIZES
+            static FQuat prevQ;
+            static bool measure = false;
+            FQuat q = m_camera->GetCameraRotation().Quaternion();
+            if (measure)
+            {
+                FString s = FString::Printf(TEXT(">>>>>>> %f"), prevQ.AngularDistance(q));
+                UE_LOG(LogTemp, Warning, TEXT("%s"), *s);
+                GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, s);
+            }
+            else
+            {
+                prevQ = q;
+            }
+            measure = !measure;
+#endif // MEASURE_ANGULAR_SIZES
+            static int kk = 0;
+            const int kn = 5;
+            FVector rgt = billboardToScene(FVector2D((kk % kn) * 0.9f / (kn - 1) + 0.05f, (kk / kn) * 0.9f / (kn - 1) + 0.05f));
+            FVector rg = rgt - gazeOrigin;
+            rg.Normalize();
+            FVector g = correctedGazeTarget - gazeOrigin;
+            g.Normalize();
+            leftPupilDiam = FMath::RadiansToDegrees(acosf(FVector::DotProduct(g, rg)));
+            g = rawGazeTarget - gazeOrigin;
+            g.Normalize();
+            rightPupilDiam = FMath::RadiansToDegrees(acosf(FVector::DotProduct(g, rg)));
+            gazeOrigin.X = m_rawTarget.X;
+            gazeOrigin.Y = m_rawTarget.Y;
+            ++kk;
+            if (kk == kn * kn)
+                kk = 0;
+        }
+#endif // COLLECCT_ANGULAR_ERROR
+
         FDateTime t = FDateTime::Now();
         string msg = to_string(t.ToUnixTimestamp() * 1000 + t.GetMillisecond()) + " " +
                      to_string(uv.X) + " " + to_string(uv.Y) + " " +
                      to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
                      to_string(correctedGazeTarget.X) + " " + to_string(correctedGazeTarget.Y) + " " + to_string(correctedGazeTarget.Z) + " " +
-                     to_string(leftPupilDiam) + " " + to_string(rightPupilDiam) + " " +
+                     to_string(leftPupilDiam) + " " + to_string(rightPupilDiam) + " " + to_string(cf) + " " +
                      to_string(currentAOI);
         string msgToSend = msg + (selected ? " SELECT" : " LOOKAT");
         for (auto &connection : m_server.get_connections())
