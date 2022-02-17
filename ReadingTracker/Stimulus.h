@@ -31,8 +31,8 @@ using WSServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 
 
 #define EYE_DEBUG
-#define COLLECCT_ANGULAR_ERROR
-#define MEASURE_ANGULAR_SIZES
+//#define COLLECCT_ANGULAR_ERROR
+//#define MEASURE_ANGULAR_SIZES
 
 UCLASS()
 class READINGTRACKER_API AStimulus : public AActor

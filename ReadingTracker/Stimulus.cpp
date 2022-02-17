@@ -569,11 +569,15 @@ void AStimulus::Tick(float DeltaTime)
         }
 #endif // COLLECCT_ANGULAR_ERROR
 
+        FVector2D rawuv = sceneToBillboard(rawGazeTarget);
+
         FDateTime t = FDateTime::Now();
         string msg = to_string(t.ToUnixTimestamp() * 1000 + t.GetMillisecond()) + " " +
-                     to_string(uv.X) + " " + to_string(uv.Y) + " " +
+                     to_string(uv.X) + " " + to_string(uv.Y) + " " + 
+                     to_string(rawuv.X) + " " + to_string(rawuv.Y) + " " +
                      to_string(gazeOrigin.X) + " " + to_string(gazeOrigin.Y) + " " + to_string(gazeOrigin.Z) + " " +
                      to_string(correctedGazeTarget.X) + " " + to_string(correctedGazeTarget.Y) + " " + to_string(correctedGazeTarget.Z) + " " +
+                     to_string(rawGazeTarget.X) + " " + to_string(rawGazeTarget.Y) + " " + to_string(rawGazeTarget.Z) + " " +
                      to_string(leftPupilDiam) + " " + to_string(rightPupilDiam) + " " + to_string(cf) + " " +
                      to_string(currentAOI);
         string msgToSend = msg + (selected ? " SELECT" : " LOOKAT");
