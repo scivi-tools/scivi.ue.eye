@@ -228,21 +228,17 @@ bool AStimulus::findBasis(const FVector &gaze, CalibPoint &cp1, CalibPoint &cp2,
         maxDot = -2.0f;
         for (int i = 0, n = m_customCalibPoints.Num(); i < n; ++i)
         {
-            //if (p1 != &m_customCalibPoints[i])
+            float d = FVector::DotProduct(gaze, m_customCalibPoints[i].gaze);
+            if (d > maxDot)
             {
-                float d = FVector::DotProduct(gaze, m_customCalibPoints[i].gaze);
-                if (d > maxDot)
-                {
-                    p1 = &m_customCalibPoints[i];
-                    maxDot = d;
-                }
+                p1 = &m_customCalibPoints[i];
+                maxDot = d;
             }
         }
         cp1 = cp2 = cp3 = *p1;
         w1 = 1.0f;
         w2 = w3 = 0.0f;
         return true;
-        //return false;
     }
 
     cp1 = *p1;
