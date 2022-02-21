@@ -23,6 +23,7 @@ using WSServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 #include "ImageUtils.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
+#include "MotionControllerComponent.h"
 #include "Misc/Base64.h"
 #include "Engine/CanvasRenderTarget2D.h"
 #include "Engine/Canvas.h"
@@ -30,9 +31,9 @@ using WSServer = SimpleWeb::SocketServer<SimpleWeb::WS>;
 #include "Stimulus.generated.h"
 
 
-#define EYE_DEBUG
-#define COLLECCT_ANGULAR_ERROR
-#define MEASURE_ANGULAR_SIZES
+//#define EYE_DEBUG
+//#define COLLECCT_ANGULAR_ERROR
+//#define MEASURE_ANGULAR_SIZES
 
 UCLASS()
 class READINGTRACKER_API AStimulus : public AActor
@@ -131,6 +132,9 @@ private:
     FTransform m_staticTransform;
     FVector m_staticExtent;
 
+    UMotionControllerComponent* m_mcRight;
+    FVector2D m_laser;
+
     APlayerCameraManager *m_camera;
 
     void initWS();
@@ -139,7 +143,7 @@ private:
     UTexture2D *loadTexture2DFromBytes(const TArray<uint8> &bytes, EImageFormat fmt, int &w, int &h);
     void updateDynTex(const TArray<uint8> &img, EImageFormat fmt, float sx, float sy, const TArray<TSharedPtr<FJsonValue>> &aois);
     void strokeCircle(UCanvas *cvs, const FVector2D &pos, float radius, float thickness, const FLinearColor &color) const;
-    void fillCircle(UCanvas *cvs, const FVector2D &pos, float radius) const;
+    void fillCircle(UCanvas *cvs, const FVector2D &pos, float radius, const FLinearColor& color) const;
     void drawContourOfAOI(UCanvas *cvs, const FLinearColor &color, float th, int aoi) const;
     bool pointInPolygon(const FVector2D &pt, const TArray<FVector2D> &poly) const;
     bool pointInBBox(const FVector2D &pt, const BBox &bbox) const;
@@ -148,6 +152,7 @@ private:
     void toggleSelectedAOI(int aoi);
     void calibrate();
     void customCalibrate();
+    void toggleMotionController(bool visible);
     float map(float v, float fromMin, float fromMax, float toMin, float toMax) const
     {
     	return toMin + (v - fromMin) / (fromMax - fromMin) * (toMax - toMin);

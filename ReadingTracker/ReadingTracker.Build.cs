@@ -11,7 +11,7 @@ public class ReadingTracker : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "SRanipal", "SRanipalEye" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "OpenSSL",  "Json", "JsonUtilities" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "OpenSSL",  "Json", "JsonUtilities", "HeadMountedDisplay" });
 		
 		PrivateIncludePaths.AddRange(new string[] {
 			"ThirdPartyLibs",

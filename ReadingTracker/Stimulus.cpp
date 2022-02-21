@@ -37,6 +37,8 @@ AStimulus::AStimulus()
 
     m_needsCustomCalib = false;
     m_customCalibSamples = 0;
+
+    m_mcRight = nullptr;
 }
 
 void AStimulus::BeginPlay()
@@ -44,6 +46,17 @@ void AStimulus::BeginPlay()
     Super::BeginPlay();
 
     m_camera = UGameplayStatics::GetPlayerController(GetWorld(), 0)->PlayerCameraManager;
+    
+    TArray<UMotionControllerComponent *> comps;
+    UGameplayStatics::GetPlayerPawn(GetWorld(), 0)->GetComponents(comps);
+    for (UMotionControllerComponent *motionController : comps)
+    {
+        if (motionController->MotionSource == "Right")
+        {
+            m_mcRight = motionController;
+            break;
+        }
+    }
 
     SRanipalEye_Framework::Instance()->StartFramework(EyeVersion);
     
@@ -89,6 +102,8 @@ void AStimulus::initWS()
                 calibrate();
             else if (jsonParsed->TryGetField("customCalibrate"))
                 customCalibrate();
+            else if (jsonParsed->TryGetField("setMotionControllerVisibility"))
+                toggleMotionController(jsonParsed->GetBoolField("setMotionControllerVisibility"));
             else
             {
                 FString image = jsonParsed->GetStringField("image");
@@ -822,4 +837,9 @@ void AStimulus::customCalibrate()
 void AStimulus::customCalib()
 {
     customCalibrate();
+}
+
+void AStimulus::toggleMotionController(bool visible)
+{
+   m_mcRight->SetHiddenInGame(!visible, true);
 }
