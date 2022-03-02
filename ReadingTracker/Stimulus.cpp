@@ -46,7 +46,7 @@ void AStimulus::BeginPlay()
     Super::BeginPlay();
 
     m_camera = UGameplayStatics::GetPlayerController(GetWorld(), 0)->PlayerCameraManager;
-    
+
     TArray<UMotionControllerComponent *> comps;
     UGameplayStatics::GetPlayerPawn(GetWorld(), 0)->GetComponents(comps);
     for (UMotionControllerComponent *motionController : comps)
@@ -57,9 +57,10 @@ void AStimulus::BeginPlay()
             break;
         }
     }
+    m_mcRight->SetHiddenInGame(true, true);
 
     SRanipalEye_Framework::Instance()->StartFramework(EyeVersion);
-    
+
     initWS();
 
     m_dynTex = mesh->CreateAndSetMaterialInstanceDynamic(0);
@@ -526,7 +527,27 @@ void AStimulus::Tick(float DeltaTime)
         needsUpdateDynContour = true;
 #else
         int currentAOI = findActiveAOI(FVector2D(uv.X * m_stimulusW, uv.Y * m_stimulusH));
-        int newAOI = m_inSelectionMode ? currentAOI : -1;
+        if (!m_mcRight->bHiddenInGame)
+        {
+            FVector p;
+            bool hr = castRay(m_mcRight->GetComponentLocation(), m_mcRight->GetComponentLocation() + m_mcRight->GetForwardVector() * 1000.0f, p);
+            if (hr)
+            {
+                m_laser = sceneToBillboard(p);
+                needsUpdateDynContour = true;
+                if (m_rReleased)
+                {
+                    int selAOI = findActiveAOI(FVector2D(m_laser.X * m_stimulusW, m_laser.Y * m_stimulusH));
+                    if (selAOI != -1)
+                    {
+                        toggleSelectedAOI(selAOI);
+                        currentAOI = selAOI;
+                        selected = true;
+                    }
+                }
+            }
+        }
+        /*int newAOI = m_inSelectionMode ? currentAOI : -1;
         if (m_activeAOI != newAOI && m_dynContour)
         {
             if (newAOI == -1 && !m_inSelectionMode)
@@ -536,7 +557,7 @@ void AStimulus::Tick(float DeltaTime)
             }
             m_activeAOI = newAOI;
             needsUpdateDynContour = true;
-        }
+        }*/
 #endif // EYE_DEBUG
 
         if (m_dynContour && needsUpdateDynContour)
@@ -742,9 +763,9 @@ void AStimulus::strokeCircle(UCanvas *cvs, const FVector2D &pos, float radius, f
     }
 }
 
-void AStimulus::fillCircle(UCanvas *cvs, const FVector2D &pos, float radius) const
+void AStimulus::fillCircle(UCanvas *cvs, const FVector2D &pos, float radius, const FLinearColor& color) const
 {
-    cvs->K2_DrawPolygon(nullptr, pos, FVector2D(radius), 16, FLinearColor(0, 0, 0, 1));
+    cvs->K2_DrawPolygon(nullptr, pos, FVector2D(radius), 16, color);
 }
 
 void AStimulus::drawContourOfAOI(UCanvas *cvs, const FLinearColor &color, float th, int aoi) const
@@ -773,8 +794,11 @@ void AStimulus::drawContour(UCanvas *cvs, int32 w, int32 h)
         drawContourOfAOI(cvs, FLinearColor(1, 0, 0, 1), th, m_activeAOI);
 #endif // EYE_DEBUG
 
+    if (!m_mcRight->bHiddenInGame)
+        fillCircle(cvs, FVector2D(m_laser.X * m_stimulusW, m_laser.Y * m_stimulusH), 10, FLinearColor(1, 0, 0, 1));
+
     if (m_customCalibPhase != CalibPhase::None && m_customCalibPhase != CalibPhase::Done)
-        fillCircle(cvs, FVector2D(m_customCalibTarget.location.X * m_stimulusW, m_customCalibTarget.location.Y * m_stimulusH), m_customCalibTarget.radius);
+        fillCircle(cvs, FVector2D(m_customCalibTarget.location.X * m_stimulusW, m_customCalibTarget.location.Y * m_stimulusH), m_customCalibTarget.radius, FLinearColor(0, 0, 0, 1));
 }
 
 bool AStimulus::pointInPolygon(const FVector2D &pt, const TArray<FVector2D> &poly) const

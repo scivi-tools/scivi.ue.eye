@@ -132,7 +132,7 @@ private:
     FTransform m_staticTransform;
     FVector m_staticExtent;
 
-    UMotionControllerComponent* m_mcRight;
+    UMotionControllerComponent *m_mcRight;
     FVector2D m_laser;
 
     APlayerCameraManager *m_camera;
